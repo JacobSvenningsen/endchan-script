@@ -1,15 +1,15 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.0.0
+// @version       1.0.1
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
+// @grant         unsafeWindow
 // @include       http://endchan.net/*
 // @include       https://endchan.net/*
 // @updateURL     https://github.com/JacobSvenningsen/endchan-script/raw/master/script.user.js
 // @downloadURL   https://github.com/JacobSvenningsen/endchan-script/raw/master/script.user.js
 // ==/UserScript==
-
 
 function afterAjaxComplete(posts, lastCount) {
   //console.log("inside afterAjaxComplete")
@@ -52,16 +52,16 @@ function setNodeStyle(ele) {
 }
 
 function mouseoverfunc() {
-  
+  var newnode;
   if(this.tagName == "SPAN") { //video
     if (this.children[1].style.display != "none") {
       return
     }
-    var newnode = this.cloneNode(true)
+    newnode = this.cloneNode(true)
     setNodeStyle(newnode)
     
     var src = document.createElement('source');
-    link = this.previousElementSibling.firstElementChild.href
+    var link = this.previousElementSibling.firstElementChild.href
     if (!link) {
       link = this.previousElementSibling.previousElementSibling.href
     }
@@ -88,7 +88,7 @@ function mouseoverfunc() {
     if (this.lastElementChild.className && this.lastElementChild.style.display != "none") { // if the image is expanded, we don't want to create a hover image
       return
     }
-    var newnode = document.createElement("img")
+    newnode = document.createElement("img")
     newnode.src = this.href
     setNodeStyle(newnode)
     document.body.prepend(newnode)
@@ -114,7 +114,9 @@ function readyFn() {
   var numPosts = threadList.getElementsByClassName("divMessage").length
   var namefield = document.getElementById("fieldName")
   namefield.value = localStorage.getItem("namefield");
-
+  if (GM) {
+    var window = unsafeWindow
+  }
   var ele = document.createElement("a")
   ele.innerText = localStorage.getItem("qrshortcuts")
   if (ele.innerText == "") {
@@ -138,7 +140,7 @@ function readyFn() {
     }
   }
   document.body.firstElementChild.appendChild(ele)
-  
+
   afterAjaxComplete(threadList.getElementsByTagName("video"), lastImgCount)
   if (window.show_quick_reply) {
     window.show_quick_reply()
@@ -150,7 +152,7 @@ function readyFn() {
   namefield.oninput = function() {
     localStorage.setItem("namefield", namefield.value)
   }
-  
+
   var oldXHR = window.XMLHttpRequest;
 
   function newXHR() {
@@ -168,7 +170,7 @@ function readyFn() {
     return realXHR;
   }
   window.XMLHttpRequest = newXHR;
-  
+
   function insertBreak() {
     var eles = threadList.getElementsByClassName("divMessage")
     for (var i = numPosts; i < eles.length; i++) {
@@ -176,7 +178,7 @@ function readyFn() {
     }
     numPosts = eles.length
   }
-  
+
   function applyHoverImgEvent() {
     var eles = threadList.getElementsByClassName("uploadCell")
     for (var i = imgCount; i < eles.length; i++) {
@@ -191,10 +193,10 @@ function readyFn() {
 window.onload = readyFn
 
 function insertAtCaret(open, close) {
-  startPos = qrbody.selectionStart;
-  endPos = qrbody.selectionEnd;
-  scrollTop = qrbody.scrollTop;
-  marked_text = "";
+  var startPos = qrbody.selectionStart;
+  var endPos = qrbody.selectionEnd;
+  var scrollTop = qrbody.scrollTop;
+  var marked_text = "";
   for (var i = qrbody.selectionStart; i < qrbody.selectionEnd; i++) {
     marked_text += qrbody.value[i]
   }
@@ -267,3 +269,4 @@ function KeyPress(e) { //Adds quick shortcuts for markup and posting
       }
   });
 }).call();
+
