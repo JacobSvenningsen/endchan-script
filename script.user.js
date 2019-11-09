@@ -83,7 +83,10 @@ function mouseoverfunc() {
     newnode.children[1].muted = true //If the video isn't forced to be muted, then some browsers refuse to autoplay the video
     newnode.children[2].remove()
     newnode.children[1].style.display = "inline"
-    
+    newnode.children[1].style.maxWidth = (innerWidth/100*95).toString() + "px"
+    newnode.children[1].style.maxHeight = (innerHeight/100*95).toString() + "px"
+    newnode.children[1].style.width = "auto"
+    newnode.children[1].style.height = "auto"
     document.body.prepend(newnode)
     newnode.children[1].play()  
   } else { //pictures
