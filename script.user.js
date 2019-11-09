@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.0.3
+// @version       1.0.4
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -97,6 +97,9 @@ function mouseoverfunc() {
     newnode.src = this.href
     setNodeStyle(newnode)
     document.body.prepend(newnode)
+  }
+  newnode.onclick = function() {
+    removeElement(this)
   }
 }
 
