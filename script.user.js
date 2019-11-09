@@ -61,9 +61,11 @@ function mouseoverfunc() {
     setNodeStyle(newnode)
     
     var src = document.createElement('source');
-    var link = this.previousElementSibling.firstElementChild.href
+    var link = this.previousElementSibling.firstElementChild
     if (!link) {
       link = this.previousElementSibling.previousElementSibling.href
+    } else {
+      link = link.href
     }
     src.setAttribute('src', link);
     
