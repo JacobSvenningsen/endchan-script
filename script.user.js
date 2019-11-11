@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.0.5
+// @version       1.0.6
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -119,17 +119,19 @@ function qrShortcutElement() {
 }
 
 function namefield() {
-  fieldName.value = localStorage.getItem("namefield");
-  
-  if (window.show_quick_reply) {
-    window.show_quick_reply()
-    qrname.value = fieldName.value
-    qrname.oninput = function() {
-      localStorage.setItem("namefield", qrname.value)
+  if (document.getElementById("fieldName") !== null) {
+    fieldName.value = localStorage.getItem("namefield");
+
+    if (window.show_quick_reply) {
+      window.show_quick_reply()
+      qrname.value = fieldName.value
+      qrname.oninput = function() {
+        localStorage.setItem("namefield", qrname.value)
+      }
     }
-  }
-  fieldName.oninput = function() {
-    localStorage.setItem("namefield", fieldName.value)
+    fieldName.oninput = function() {
+      localStorage.setItem("namefield", fieldName.value)
+    }
   }
 }
 
@@ -175,6 +177,21 @@ function readyFn() {
     }
   }
   
+  function hidePost(ele) {
+    Object.entries(localStorage).forEach(function(entry) {
+      var name = ele.getElementsByClassName("labelId")[0]
+      if (name) {
+        name = name.innerText.slice(0,6)
+        if (entry[0] == ("hide"+boardUri+"User"+name) && entry[1] == "true") {
+          ele.style.display = "none"
+          if (document.getElementById("Show"+boardUri+"User"+name) && ele.nextElementSibling.id != ("Show"+boardUri+"User"+name)) {
+            ele.after(document.getElementById("Show"+boardUri+"User"+name))
+          }
+        }
+      }
+    })
+  }
+  
   const updateNewPosts = function(list, observer) {
     for(let mutation of list) {
       if (mutation.type === 'childList') {
@@ -183,6 +200,7 @@ function readyFn() {
           applyHoverImgEvent(node.getElementsByClassName("uploadCell"))
           insertBreak(node.getElementsByClassName("divMessage"))
           setIdTextColor(node.getElementsByClassName("labelId"))
+          hidePost(node)
         })
       }
     }
@@ -192,6 +210,14 @@ function readyFn() {
     setLoop(threadList.getElementsByTagName("video"))
     applyHoverImgEvent(threadList.getElementsByClassName("uploadCell"))
     setIdTextColor(threadList.getElementsByClassName("labelId"))
+    if (document.getElementById("divPosts")) {
+      divPosts.childNodes.forEach(hidePost)
+    } else {
+      var eles = document.getElementsByClassName("divPosts")
+      for (var i = 0; i < eles.length; i++) {
+        eles[i].childNodes.forEach(hidePost)
+      }
+    }
     observer = new MutationObserver(updateNewPosts)
     observer.observe(threadList.getElementsByClassName("divPosts")[0], {childList:true}) // element to observe for changes, and conf
   }
