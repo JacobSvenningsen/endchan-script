@@ -118,7 +118,7 @@ function qrShortcutElement() {
   return ele
 }
 
-function namefield() {
+function namefield(window) {
   if (document.getElementById("fieldName") !== null) {
     fieldName.value = localStorage.getItem("namefield");
     if (window.show_quick_reply) {
@@ -140,7 +140,7 @@ function readyFn() {
   }
   
   document.body.firstElementChild.appendChild(qrShortcutElement())
-  namefield()
+  namefield(window)
 
   function setLoop(posts) {
     for (var i = 0; i < posts.length; i++) {
