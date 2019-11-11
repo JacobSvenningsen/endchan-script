@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.0.4
+// @version       1.0.5
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -10,35 +10,6 @@
 // @updateURL     https://github.com/JacobSvenningsen/endchan-script/raw/master/script.user.js
 // @downloadURL   https://github.com/JacobSvenningsen/endchan-script/raw/master/script.user.js
 // ==/UserScript==
-
-function afterAjaxComplete(posts, lastCount) {
-  //console.log("inside afterAjaxComplete")
-  if (posts.length > lastCount) {
-    //console.log("posts.length > lastCount")
-    for (var i = lastCount; i < posts.length; i++) {
-      //console.log("setting attribute")
-      posts[i].setAttribute("loop", "true")
-    }
-  }  
-  return posts.length
-}
-
-function setIdTextColor(count) {
-  var eles = threadList.getElementsByClassName("labelId")
-  for (var i = count; i < eles.length; i++) {
-    var colorAsHex = eles[i].innerText
-    var rgb = [0,0,0]
-    rgb[0] = parseInt(colorAsHex[0] + colorAsHex[1], 16);
-    rgb[1] = parseInt(colorAsHex[2] + colorAsHex[3], 16);
-    rgb[2] = parseInt(colorAsHex[4] + colorAsHex[5], 16);
-
-    // http://www.w3.org/TR/AERT#color-contrast
-    var o = Math.round(((rgb[0] * 299) + (rgb[1] * 587) + (rgb[2] * 114)) / 1000);
-    var color = (o > 125) ? 'black' : 'white';
-    eles[i].style.color = color 
-  }
-  return eles.length
-}
 
 function setNodeStyle(ele) {
   ele.style.position = "fixed"
@@ -116,10 +87,6 @@ function mouseoutfunc(e) {
 }
 
 function readyFn() {
-  var lastImgCount = 0
-  var imgCount = 0
-  var idCount = 0
-  var numPosts = threadList.getElementsByClassName("divMessage").length
   var namefield = document.getElementById("fieldName")
   namefield.value = localStorage.getItem("namefield");
   if (GM) {
@@ -149,7 +116,6 @@ function readyFn() {
   }
   document.body.firstElementChild.appendChild(ele)
 
-  afterAjaxComplete(threadList.getElementsByTagName("video"), lastImgCount)
   if (window.show_quick_reply) {
     window.show_quick_reply()
     qrname.value = localStorage.getItem("namefield")
@@ -161,42 +127,58 @@ function readyFn() {
     localStorage.setItem("namefield", namefield.value)
   }
 
-  var oldXHR = window.XMLHttpRequest;
-
-  function newXHR() {
-    var realXHR = new oldXHR();
-    realXHR.addEventListener("readystatechange", function() {
-      if(realXHR.readyState==4 && realXHR.status==200) {
-        setTimeout(function() {
-          lastImgCount = afterAjaxComplete(threadList.getElementsByTagName("video"), lastImgCount)
-          applyHoverImgEvent()
-          insertBreak()
-          idCount = setIdTextColor(idCount)
-        }, 1000)
-      }
-    }, false);
-    return realXHR;
-  }
-  window.XMLHttpRequest = newXHR;
-
-  function insertBreak() {
-    var eles = threadList.getElementsByClassName("divMessage")
-    for (var i = numPosts; i < eles.length; i++) {
-      eles[i].before(document.createElement("div"))
+  function setLoop(posts) {
+    for (var i = 0; i < posts.length; i++) {
+      posts[i].setAttribute("loop", "true")
     }
-    numPosts = eles.length
   }
 
-  function applyHoverImgEvent() {
-    var eles = threadList.getElementsByClassName("uploadCell")
-    for (var i = imgCount; i < eles.length; i++) {
+  function applyHoverImgEvent(eles) {
+    for (var i = 0; i < eles.length; i++) {
       eles[i].lastElementChild.onmouseover = mouseoverfunc
       eles[i].lastElementChild.onmouseout = mouseoutfunc
     };
-    imgCount = eles.length;
   }
-  applyHoverImgEvent()
-  idCount = setIdTextColor(idCount)
+  
+  function insertBreak(eles) {
+    for (var i = 0; i < eles.length; i++) {
+      eles[i].before(document.createElement("div"))
+    }
+  }
+  
+  function setIdTextColor(eles) {
+    for (var i = 0; i < eles.length; i++) {
+      var colorAsHex = eles[i].innerText
+      var rgb = [0,0,0]
+      rgb[0] = parseInt(colorAsHex[0] + colorAsHex[1], 16);
+      rgb[1] = parseInt(colorAsHex[2] + colorAsHex[3], 16);
+      rgb[2] = parseInt(colorAsHex[4] + colorAsHex[5], 16);
+
+      // http://www.w3.org/TR/AERT#color-contrast
+      var o = Math.round(((rgb[0] * 299) + (rgb[1] * 587) + (rgb[2] * 114)) / 1000);
+      var color = (o > 125) ? 'black' : 'white';
+      eles[i].style.color = color 
+    }
+  }
+  
+  const updateNewPosts = function(list, observer) {
+    for(let mutation of list) {
+      if (mutation.type === 'childList') {
+        mutation.addedNodes.forEach(function(node) {
+          setLoop(node.getElementsByTagName("video"))
+          applyHoverImgEvent(node.getElementsByClassName("uploadCell"))
+          insertBreak(node.getElementsByClassName("divMessage"))
+          setIdTextColor(node.getElementsByClassName("labelId"))
+        })
+      }
+    }
+  }
+
+  setLoop(threadList.getElementsByTagName("video"))
+  applyHoverImgEvent(threadList.getElementsByClassName("uploadCell"))
+  setIdTextColor(threadList.getElementsByClassName("labelId"))
+  observer = new MutationObserver(updateNewPosts)
+  observer.observe(threadList.getElementsByClassName("divPosts")[0], {childList:true}) // element to observe for changes, and conf
 }
 window.onload = readyFn
 
