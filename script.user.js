@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.0.6
+// @version       1.0.7
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -121,7 +121,6 @@ function qrShortcutElement() {
 function namefield() {
   if (document.getElementById("fieldName") !== null) {
     fieldName.value = localStorage.getItem("namefield");
-
     if (window.show_quick_reply) {
       window.show_quick_reply()
       qrname.value = fieldName.value
