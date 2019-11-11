@@ -183,8 +183,16 @@ function readyFn() {
         name = name.innerText.slice(0,6)
         if (entry[0] == ("hide"+boardUri+"User"+name) && entry[1] == "true") {
           ele.style.display = "none"
-          if (document.getElementById("Show"+boardUri+"User"+name) && ele.nextElementSibling.id != ("Show"+boardUri+"User"+name)) {
+          if (ele.nextElementSibling === null) {
             ele.after(document.getElementById("Show"+boardUri+"User"+name))
+          } else {
+            try {
+              if (document.getElementById("Show"+boardUri+"User"+name) !== null && ele.nextElementSibling.id != ("Show"+boardUri+"User"+name)) {
+                ele.after(document.getElementById("Show"+boardUri+"User"+name))
+              }
+            } catch(err) {
+              
+            }
           }
         }
       }
