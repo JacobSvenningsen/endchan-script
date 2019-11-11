@@ -22,6 +22,36 @@ function setNodeStyle(ele) {
   ele.style.zIndex = "110"
 }
 
+function updateVideoChild(parent, span) {
+  var src = document.createElement('source');
+  var video = parent.children[1]
+  var link = span.previousElementSibling.firstElementChild
+  if (!link) {
+    link = span.previousElementSibling.previousElementSibling.href
+  } else {
+    link = link.href
+  }
+  src.setAttribute('src', link);
+
+  if (link.endsWith(".webm")) {
+    src.setAttribute('type', 'video/webm');
+  } else if (link.endsWith(".mp4")) {
+    src.setAttribute('type', 'video/mp4');
+  } else if (link.endsWith(".ogg")) {
+    src.setAttribute('type', 'video/ogg');
+  }
+
+  video.appendChild(src)
+  video.removeAttribute('controls')
+  video.setAttribute('muted', true) 
+  video.muted = true //If the video isn't forced to be muted, then some browsers refuse to autoplay the video
+  video.style.display = "inline"
+  video.style.maxWidth = (innerWidth/100*95).toString() + "px"
+  video.style.maxHeight = (innerHeight/100*95).toString() + "px"
+  video.style.width = "auto"
+  video.style.height = "auto"
+}
+
 function mouseoverfunc() {
   var newnode;
   if(this.tagName == "SPAN") { //video
@@ -30,34 +60,10 @@ function mouseoverfunc() {
     }
     newnode = this.cloneNode(true)
     setNodeStyle(newnode)
+    updateVideoChild(newnode, this)
     
-    var src = document.createElement('source');
-    var link = this.previousElementSibling.firstElementChild
-    if (!link) {
-      link = this.previousElementSibling.previousElementSibling.href
-    } else {
-      link = link.href
-    }
-    src.setAttribute('src', link);
-    
-    if (link.endsWith(".webm")) {
-      src.setAttribute('type', 'video/webm');
-    } else if (link.endsWith(".mp4")) {
-      src.setAttribute('type', 'video/mp4');
-    } else if (link.endsWith(".ogg")) {
-      src.setAttribute('type', 'video/ogg');
-    }
-    
-    newnode.children[1].appendChild(src)
-    newnode.children[1].removeAttribute('controls')
-    newnode.children[1].setAttribute('muted', true) 
-    newnode.children[1].muted = true //If the video isn't forced to be muted, then some browsers refuse to autoplay the video
     newnode.children[2].remove()
-    newnode.children[1].style.display = "inline"
-    newnode.children[1].style.maxWidth = (innerWidth/100*95).toString() + "px"
-    newnode.children[1].style.maxHeight = (innerHeight/100*95).toString() + "px"
-    newnode.children[1].style.width = "auto"
-    newnode.children[1].style.height = "auto"
+    
     document.body.prepend(newnode)
     newnode.children[1].play()  
   } else { //pictures
@@ -86,12 +92,7 @@ function mouseoutfunc(e) {
   }
 }
 
-function readyFn() {
-  var namefield = document.getElementById("fieldName")
-  namefield.value = localStorage.getItem("namefield");
-  if (GM) {
-    var window = unsafeWindow
-  }
+function qrShortcutElement() {
   var ele = document.createElement("a")
   ele.innerText = localStorage.getItem("qrshortcuts")
   if (ele.innerText == "") {
@@ -114,18 +115,31 @@ function readyFn() {
       localStorage.setItem("qrshortcuts", false)
     }
   }
-  document.body.firstElementChild.appendChild(ele)
+  return ele
+}
 
+function namefield() {
+  fieldName.value = localStorage.getItem("namefield");
+  
   if (window.show_quick_reply) {
     window.show_quick_reply()
-    qrname.value = localStorage.getItem("namefield")
+    qrname.value = fieldName.value
     qrname.oninput = function() {
       localStorage.setItem("namefield", qrname.value)
     }
   }
-  namefield.oninput = function() {
-    localStorage.setItem("namefield", namefield.value)
+  fieldName.oninput = function() {
+    localStorage.setItem("namefield", fieldName.value)
   }
+}
+
+function readyFn() {
+  if (GM) {
+    var window = unsafeWindow
+  }
+  
+  document.body.firstElementChild.appendChild(qrShortcutElement())
+  namefield()
 
   function setLoop(posts) {
     for (var i = 0; i < posts.length; i++) {
@@ -174,11 +188,13 @@ function readyFn() {
     }
   }
 
-  setLoop(threadList.getElementsByTagName("video"))
-  applyHoverImgEvent(threadList.getElementsByClassName("uploadCell"))
-  setIdTextColor(threadList.getElementsByClassName("labelId"))
-  observer = new MutationObserver(updateNewPosts)
-  observer.observe(threadList.getElementsByClassName("divPosts")[0], {childList:true}) // element to observe for changes, and conf
+  if (document.getElementById("threadList")) {
+    setLoop(threadList.getElementsByTagName("video"))
+    applyHoverImgEvent(threadList.getElementsByClassName("uploadCell"))
+    setIdTextColor(threadList.getElementsByClassName("labelId"))
+    observer = new MutationObserver(updateNewPosts)
+    observer.observe(threadList.getElementsByClassName("divPosts")[0], {childList:true}) // element to observe for changes, and conf
+  }
 }
 window.onload = readyFn
 
@@ -259,4 +275,3 @@ function KeyPress(e) { //Adds quick shortcuts for markup and posting
       }
   });
 }).call();
-
