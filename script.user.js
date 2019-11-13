@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.0.8
+// @version       1.0.10
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -215,6 +215,80 @@ function readyFn() {
     }
   }
   
+  function insertInlinePost(quote) {
+    if (quote.tagName == "A") {
+      quote.removeAttribute("href")
+      quote.style.cursor = "pointer"
+      quote.onclick = function() {
+        if (quote.classList.contains("toggled")) { //Toggled determines if we should embed post, or remove embedded posts. True = remove, False = embed
+          quote.classList.remove("toggled")
+          quote.parentElement.parentElement.parentElement.classList.remove("postsEmbedded") // great grandparent of quote is the post in its entirety
+          quote.nextElementSibling.remove()
+          quote.style.opacity = "1.0"
+        } else {
+          var nodename = quote.innerText.slice(2).split(" ")[0]
+          var nodeToClone = document.getElementById(nodename)
+          if (!nodeToClone.classList.contains("postsEmbedded")) {
+            var clonedNode = nodeToClone.cloneNode(true)
+            clonedNode.removeAttribute("id")
+            clonedNode.getElementsByClassName("labelId")[0].classList.remove("labelId")
+            clonedNode.firstElementChild.style.borderWidth = "medium"
+            clonedNode.firstElementChild.style.borderStyle = "solid"
+            updateLinks(clonedNode, "quoteLink", true)
+            updateLinks(clonedNode, "panelBacklinks", true)
+            quote.parentElement.parentElement.parentElement.classList.add("postsEmbedded")
+            quote.after(clonedNode)
+            quote.classList.add("toggled")
+            quote.style.opacity = "0.6"
+          }
+        }
+      }
+    }
+  }
+  
+  function embeddedLinkHover(e) {
+    var node = document.getElementById(this.innerText.slice(2).split(" ")[0]).cloneNode(true);
+    node.id = "appendedNode"
+    node.style.position = "fixed"
+    node.style.top = e.clientY + 'px'
+    node.style.left = e.clientX + 10 + 'px'
+    node.getElementsByClassName("labelId")[0].classList.remove("labelId")
+    threadList.getElementsByClassName("divPosts")[0].appendChild(node)
+  }
+  
+  function updateLinks(parent, linkStr, updateEvents) {
+    var links = parent.getElementsByClassName(linkStr)
+    if (linkStr == "quoteLink") {
+      for (var i = 0; i < links.length; i++) {
+        if (updateEvents) { 
+          links[i].onmouseenter = embeddedLinkHover 
+          links[i].onmouseout = function() { document.getElementById("appendedNode").remove() }
+        }
+        insertInlinePost(links[i])
+      }
+    } else {
+      for (var i = 0; i < links.length; i++) {
+        links[i].childNodes.forEach(function(quote) { 
+          if (updateEvents) { 
+            quote.onmouseenter = embeddedLinkHover
+            quote.onmouseout = function() { document.getElementById("appendedNode").remove() }
+          }
+          insertInlinePost(quote);
+        })
+      }
+    }
+  }
+  
+  function updateNewlyCreatedBacklinks(node) {
+    var quotes = node.getElementsByClassName("quoteLink")
+    for (var i = 0; i < quotes.length; i++) {
+      var backlinks = document.getElementById(quotes[i].innerText.slice(2).split(" ")[0]).getElementsByClassName("panelBacklinks")
+      for (var j = 0; j < backlinks.length; j++) {
+        backlinks[j].childNodes.forEach(insertInlinePost)
+      }
+    }
+  }
+  
   const updateNewPosts = function(list, observer) {
     for(let mutation of list) {
       if (mutation.type === 'childList') {
@@ -225,6 +299,8 @@ function readyFn() {
           setIdTextColor(node.getElementsByClassName("labelId"))
           replaceLinkQuoting(node.getElementsByClassName("linkQuote"))
           hidePost(node)
+          updateLinks(node, "quoteLink")
+          updateNewlyCreatedBacklinks(node)
         })
       }
     }
@@ -243,6 +319,8 @@ function readyFn() {
       }
     }
     replaceLinkQuoting(threadList.getElementsByClassName("linkQuote"))
+    updateLinks(threadList, "panelBacklinks")
+    updateLinks(threadList, "quoteLink")
     observer = new MutationObserver(updateNewPosts)
     observer.observe(threadList.getElementsByClassName("divPosts")[0], {childList:true}) // element to observe for changes, and conf
   }
