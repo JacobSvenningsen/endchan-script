@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.0.7
+// @version       1.0.8
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -199,6 +199,22 @@ function readyFn() {
     })
   }
   
+  function replaceLinkQuoting(nodes) {
+    for(var i = 0; i < nodes.length; i++) {
+      nodes[i].removeAttribute("href")
+      nodes[i].style.cursor = "pointer"
+      nodes[i].onclick = function() {
+        var toQuote = this.innerText;
+
+        if (typeof add_quick_reply_quote != "undefined") {
+          add_quick_reply_quote(toQuote);
+        }
+
+        document.getElementById('fieldMessage').value += '>>' + toQuote + '\n';
+      }
+    }
+  }
+  
   const updateNewPosts = function(list, observer) {
     for(let mutation of list) {
       if (mutation.type === 'childList') {
@@ -207,6 +223,7 @@ function readyFn() {
           applyHoverImgEvent(node.getElementsByClassName("uploadCell"))
           insertBreak(node.getElementsByClassName("divMessage"))
           setIdTextColor(node.getElementsByClassName("labelId"))
+          replaceLinkQuoting(node.getElementsByClassName("linkQuote"))
           hidePost(node)
         })
       }
@@ -225,6 +242,7 @@ function readyFn() {
         eles[i].childNodes.forEach(hidePost)
       }
     }
+    replaceLinkQuoting(threadList.getElementsByClassName("linkQuote"))
     observer = new MutationObserver(updateNewPosts)
     observer.observe(threadList.getElementsByClassName("divPosts")[0], {childList:true}) // element to observe for changes, and conf
   }
