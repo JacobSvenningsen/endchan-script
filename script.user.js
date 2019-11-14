@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.0.11
+// @version       1.0.12
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -261,7 +261,10 @@ function readyFn() {
           if (!nodeToClone.classList.contains("postsEmbedded")) {
             var clonedNode = nodeToClone.cloneNode(true)
             clonedNode.removeAttribute("id")
-            clonedNode.getElementsByClassName("labelId")[0].classList.remove("labelId")
+            var id = clonedNode.getElementsByClassName("labelId")[0]
+            if (id) {
+              id.classList.remove("labelId")
+            }
             clonedNode.firstElementChild.style.borderWidth = "medium"
             clonedNode.firstElementChild.style.borderStyle = "solid"
             updateLinks(clonedNode, "quoteLink", true)
@@ -285,7 +288,10 @@ function readyFn() {
     node.style.position = "fixed"
     node.style.top = e.clientY + 'px'
     node.style.left = e.clientX + 10 + 'px'
-    node.getElementsByClassName("labelId")[0].classList.remove("labelId")
+    var id = node.getElementsByClassName("labelId")[0]
+    if (id) {
+      id.classList.remove("labelId")
+    }
     threadList.getElementsByClassName("divPosts")[0].appendChild(node)
   }
   
@@ -437,4 +443,5 @@ function KeyPress(e) { //Adds quick shortcuts for markup and posting
       }
   });
 }).call();
+
 
