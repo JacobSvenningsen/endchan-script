@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.0.10
+// @version       1.0.11
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -43,8 +43,6 @@ function updateVideoChild(parent, span) {
 
   video.appendChild(src)
   video.removeAttribute('controls')
-  video.setAttribute('muted', true) 
-  video.muted = true //If the video isn't forced to be muted, then some browsers refuse to autoplay the video
   video.style.display = "inline"
   video.style.maxWidth = (innerWidth/100*95).toString() + "px"
   video.style.maxHeight = (innerHeight/100*95).toString() + "px"
@@ -61,7 +59,8 @@ function mouseoverfunc() {
     newnode = this.cloneNode(true)
     setNodeStyle(newnode)
     updateVideoChild(newnode, this)
-    
+    newnode.children[1].setAttribute('muted', true) 
+    newnode.children[1].muted = true //If the video isn't forced to be muted, then some browsers refuse to autoplay the video
     newnode.children[2].remove()
     
     document.body.prepend(newnode)
@@ -215,6 +214,37 @@ function readyFn() {
     }
   }
   
+  function setOnclickEvent(clonedNode, origNode) {
+    var newPics = clonedNode.getElementsByClassName("uploadCell")
+    var origPics = origNode.getElementsByClassName("uploadCell")
+    for(var i = 0; i < newPics.length; i++) {
+      //newPics[i].lastElementChild.on("click",  this.bind(expandImage(mouseEvent, newPics[i].lastElementChild)))
+      newPics[i].lastElementChild.onclick = function(e) {
+        //console.log(this)
+        if (this.tagName == "SPAN") {
+          if (this.classList.contains("expanded")) {
+            this.children[1].pause()
+            this.children[1].style.display = "none"
+            this.children[2].style.display = "inline"
+            this.classList.remove("expanded")
+          } else {
+            if (!this.children[1].childElementCount) {
+              updateVideoChild(this, this)
+            } else {
+              this.children[1].style.display = "inline"
+              this.children[1].removeAttribute('controls')
+            }
+            this.children[1].play()
+            this.classList.add("expanded")
+            this.children[2].style.display = "none"
+          }
+        } else {
+          return expandImage(e, this)
+        }
+      }
+    }
+  }
+  
   function insertInlinePost(quote) {
     if (quote.tagName == "A") {
       quote.removeAttribute("href")
@@ -236,6 +266,9 @@ function readyFn() {
             clonedNode.firstElementChild.style.borderStyle = "solid"
             updateLinks(clonedNode, "quoteLink", true)
             updateLinks(clonedNode, "panelBacklinks", true)
+            applyHoverImgEvent(clonedNode.getElementsByClassName("uploadCell"))
+            setLoop(clonedNode.getElementsByTagName("video"))
+            setOnclickEvent(clonedNode, nodeToClone)
             quote.parentElement.parentElement.parentElement.classList.add("postsEmbedded")
             quote.after(clonedNode)
             quote.classList.add("toggled")
@@ -404,3 +437,4 @@ function KeyPress(e) { //Adds quick shortcuts for markup and posting
       }
   });
 }).call();
+
