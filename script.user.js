@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.1
+// @version       1.1.2
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -283,6 +283,7 @@ function readyFn() {
       if (document.getElementById(quote.innerText.slice(2).split(" ")[0])) {
         quote.removeAttribute("href")
         quote.style.cursor = "pointer"
+        quote.style.textDecoration = "underline"
         quote.onclick = function() {
           if (quote.classList.contains("toggled")) { //Toggled determines if we should embed post, or remove embedded posts. True = remove, False = embed
             quote.classList.remove("toggled")
