@@ -233,9 +233,7 @@ function readyFn() {
   
   function replaceLinkQuoting(nodes) {
     for(var i = 0; i < nodes.length; i++) {
-      nodes[i].removeAttribute("href")
-      nodes[i].style.cursor = "pointer"
-      nodes[i].onclick = function() {
+      nodes[i].onclick = function(e) {
         var toQuote = this.innerText;
 
         if (typeof add_quick_reply_quote != "undefined") {
@@ -243,6 +241,8 @@ function readyFn() {
         }
 
         document.getElementById('fieldMessage').value += '>>' + toQuote + '\n';
+        e.preventDefault();     
+        e.stopPropagation(); 
       }
     }
   }
