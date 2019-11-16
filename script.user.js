@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.3
+// @version       1.1.4
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -304,6 +304,7 @@ function readyFn() {
               clonedNode.firstElementChild.style.borderStyle = "solid"
               updateLinks(clonedNode, "quoteLink", true)
               updateLinks(clonedNode, "panelBacklinks", true)
+              replaceLinkQuoting(clonedNode.getElementsByClassName("linkQuote"))
               applyHoverImgEvent(clonedNode.getElementsByClassName("uploadCell"))
               setLoop(clonedNode.getElementsByTagName("video"))
               setOnclickEvent(clonedNode, nodeToClone)
