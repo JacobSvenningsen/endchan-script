@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.8
+// @version       1.1.9
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -129,13 +129,23 @@ function styleForSettingsWindow() {
   return style
 }
 
+function qrShortcutsSettingOnclick() {
+  if (localStorage.getItem("qrshortcuts") == "false") {
+    document.onkeydown = KeyPress
+    localStorage.setItem("qrshortcuts", true)
+  } else {
+    document.onkeydown = null
+    localStorage.setItem("qrshortcuts", false)
+  }
+}
+
 function settingsElement(applyHoverImgEvent) {
   var ele = document.createElement("a")
   ele.innerText = "[script settings]"
   let url = document.URL.split("#")[0]
   url += "#settings"
   
-  ele.href = document.URL + "#settings"
+  ele.href = url
   ele.style.float = "right"
   ele.style.cursor = "pointer"
   
@@ -152,15 +162,6 @@ function settingsElement(applyHoverImgEvent) {
   var settingsScreen = document.createElement("div")
   settingsScreen.classList.add("settings")
   
-  function qrShortcutsSettingOnclick() {
-    if (localStorage.getItem("qrshortcuts") == "false") {
-      document.onkeydown = KeyPress
-      localStorage.setItem("qrshortcuts", true)
-    } else {
-      document.onkeydown = null
-      localStorage.setItem("qrshortcuts", false)
-    }
-  }
   function hoverImageSettingOnclick() {
     if (localStorage.getItem("hover_enabled") == "false") {
       localStorage.setItem("hover_enabled", true)
@@ -601,6 +602,11 @@ function imageThumbsStyle() {
   });
   document.firstElementChild.appendChild(styleForSettingsWindow())
   document.firstElementChild.appendChild(imageThumbsStyle())
+  if (localStorage.getItem("qrshortcuts") == "true") {
+    document.onkeydown = KeyPress
+  } else {
+    document.onkeydown = null
+  }
 }).call();
 
 
