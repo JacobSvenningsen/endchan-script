@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.4
+// @version       1.1.5
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -147,6 +147,191 @@ function toggleHoverElement(hoverEnableFunc) {
   return ele
 }
 
+function styleForSettingsWindow() {
+  var style = document.createElement("style")
+  style.id = "settings_screen_style"
+  style.type = "text/css"
+  style.innerText = 
+    '#settingsWindow.opened { \
+      display:block !important; \
+      position:fixed; \
+      top: 50%; \
+      left: 50%; \
+      width:30em; \
+      height:18em; \
+      margin-top: -9em; \
+      margin-left: -15em; \
+      border: solid 1px; \
+      z-index: 101; \
+    } \
+    \
+    #settingsWindow.opened h1 { \
+        text-align:center; \
+    } \
+    \
+    #settingsWindow.opened .settings { \
+        width:90%; \
+    } \
+    \
+    #settingsOverlay { \
+        position:fixed; \
+        top:0px; \
+        left:0px; \
+        width:100%; \
+        height:100%; \
+        background-color: rgba(0,0,0,0.4); \
+        z-index:100; \
+    }'
+  return style
+}
+
+function settingsElement(applyHoverImgEvent) {
+  var ele = document.createElement("a")
+  ele.innerText = "[script settings]"
+  let url = document.URL.split("#")[0]
+  url += "#settings"
+  
+  ele.href = document.URL + "#settings"
+  ele.style.float = "right"
+  ele.style.cursor = "pointer"
+  
+  var settingsBox = document.createElement("div")
+  settingsBox.id = "settingsWindow"
+  settingsBox.style.backgroundColor = window.getComputedStyle(document.getElementsByClassName("innerPost")[0]).backgroundColor
+  //settingsBox.classList.add("closed")
+  
+  var header = document.createElement("h1")
+  header.innerText = "Settings"
+  settingsBox.appendChild(header)
+  settingsBox.appendChild(document.createElement("hr"))
+  
+  var settingsScreen = document.createElement("div")
+  settingsScreen.classList.add("settings")
+  
+  let setting1 = document.createElement("label")
+  let setting2 = document.createElement("label")
+  let setting3 = document.createElement("label")
+  
+  let input1 = document.createElement("input")
+  let input2 = document.createElement("input")
+  let input3 = document.createElement("input")
+  
+  let description1 = document.createElement("span")
+  let description2 = document.createElement("span")
+  let description3 = document.createElement("span")
+  
+  description1.innerText = "Quick Reply Shortcuts"
+  description2.innerText = "Image Hover"
+  description3.innerText = "Small Thumbnails"
+  
+  input1.type = "checkbox"
+  input1.checked = (localStorage.getItem("qrshortcuts") == "true")
+  input1.onchange = function() {
+    if (localStorage.getItem("qrshortcuts") == "false") {
+      document.onkeydown = KeyPress
+      localStorage.setItem("qrshortcuts", true)
+    } else {
+      document.onkeydown = null
+      localStorage.setItem("qrshortcuts", false)
+    }
+  }
+  
+    
+  input2.type = "checkbox"
+  input2.checked = (localStorage.getItem("hover_enabled") == "true")
+  input2.onchange = function() {
+    if (localStorage.getItem("hover_enabled") == "false") {
+      localStorage.setItem("hover_enabled", true)
+      if(document.getElementById("threadList")) {
+        applyHoverImgEvent(threadList.getElementsByClassName("uploadCell"))
+      }
+    } else {
+      if(document.getElementById("threadList")) {
+        var imgs = threadList.getElementsByClassName("uploadCell")
+        for (var i = 0; i < imgs.length; i++) {
+          imgs[i].lastElementChild.onmouseover = null
+          imgs[i].lastElementChild.onmouseout = null
+        }
+      }
+      localStorage.setItem("hover_enabled", false)
+    }
+  }
+    
+  input3.type = "checkbox"
+  input3.checked = (localStorage.getItem("smallThumbs_enabled") == "true")
+  let style = document.createElement("style")
+  style.id = "image_thumbs_settings"
+  style.type = "text/css"
+  style.innerText = (input3.checked) ? ' \
+    a.imgLink img:not([class="imgExpanded"]), \
+    .uploadCell span img:not([class="imgExpanded"]){ \
+      height: auto; \
+      width: auto; \
+      max-width: 125px; \
+      max-height: 125px; \
+    } \
+  ' : 'a.imgLink img:not([class="imgExpanded"]) {}'
+  input3.onchange = function() {
+    if (localStorage.getItem("smallThumbs_enabled") == "true") {
+      localStorage.setItem("smallThumbs_enabled", false)
+      image_thumbs_settings.innerText =  
+        style.innerText = '/*\
+        a.imgLink img:not([class="imgExpanded"]), \
+        .uploadCell span img:not([class="imgExpanded"]){ \
+          height: auto; \
+          width: auto; \
+          max-width: 125px; \
+          max-height: 125px; \
+        }*/'
+    } else {
+      localStorage.setItem("smallThumbs_enabled", "true")
+      image_thumbs_settings.innerText =  
+        style.innerText = ' \
+        a.imgLink img:not([class="imgExpanded"]), \
+        .uploadCell span img:not([class="imgExpanded"]){ \
+          height: auto; \
+          width: auto; \
+          max-width: 125px; \
+          max-height: 125px; \
+        }'
+    }
+  }
+  
+  setting1.appendChild(input1) 
+  setting1.appendChild(description1)
+  setting2.appendChild(input2)
+  setting2.appendChild(description2)
+  setting3.appendChild(input3)
+  setting3.appendChild(description3)
+  
+  settingsScreen.appendChild(setting1)
+  settingsScreen.appendChild(setting2)
+  settingsScreen.appendChild(setting3)
+  
+  settingsBox.appendChild(settingsScreen)
+  settingsBox.style.display = "none"
+  settingsBox.style.zIndex = "100"
+  document.body.after(settingsBox)
+  
+  let overlay = document.createElement("div")
+  overlay.id = "settingsOverlay"
+  overlay.style.display = "none"
+  overlay.onclick = function() {this.style.display = "none"; settingsWindow.classList.toggle("opened")}
+  
+  settingsWindow.before(overlay)
+  
+  ele.onmousedown = function(e) {
+    settingsBox.classList.toggle("opened")
+    settingsOverlay.style.display = "block"
+    e.preventDefault()
+    e.stopPropagation()
+  }
+  
+  document.body.after(styleForSettingsWindow())
+  document.body.after(style)
+  return ele
+}
+
 function namefield(window) {
   if (document.getElementById("fieldName") !== null) {
     fieldName.value = localStorage.getItem("namefield");
@@ -170,6 +355,7 @@ function readyFn() {
   
   document.body.firstElementChild.appendChild(qrShortcutElement())
   document.body.firstElementChild.appendChild(toggleHoverElement(applyHoverImgEvent))
+  document.body.firstElementChild.appendChild(settingsElement(applyHoverImgEvent))
   namefield(window)
 
   function setLoop(posts) {
