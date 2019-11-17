@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.5
+// @version       1.1.6
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -91,62 +91,6 @@ function mouseoutfunc(e) {
   }
 }
 
-function qrShortcutElement() {
-  var ele = document.createElement("a")
-  ele.innerText = localStorage.getItem("qrshortcuts")
-  if (ele.innerText == "") {
-    localStorage.setItem("qrshortcuts", false)
-  } else if (ele.innerText == "true") {
-    document.onkeydown = KeyPress
-  }
-  ele.style.float = "right"
-  ele.style.cursor = "pointer"
-  ele.innerText = (localStorage.getItem("qrshortcuts") == "true") ? "[disable qr shortcuts]" : "[enable qr shortcuts]"
-  ele.onmousedown = function() {
-    if (localStorage.getItem("qrshortcuts") == "false") {
-      ele.innerText = "[disable qr shortcuts]"
-      document.onkeydown = KeyPress
-      localStorage.setItem("qrshortcuts", true)
-    } else {
-      ele.innerText = "[enable qr shortcuts]"
-      document.onkeydown = null
-      localStorage.setItem("qrshortcuts", false)
-    }
-  }
-  return ele
-}
-
-function toggleHoverElement(hoverEnableFunc) {
-  var ele = document.createElement("a")
-  ele.innerText = localStorage.getItem("hover_enabled")
-  if (ele.innerText == "") {
-    localStorage.setItem("hover_enabled", true)
-  }
-  ele.style.float = "right"
-  ele.style.cursor = "pointer"
-  ele.innerText = (localStorage.getItem("hover_enabled") == "true") ? "[disable image on hover]" : "[enable image on hover]"
-  ele.onmousedown = function() {
-    if (localStorage.getItem("hover_enabled") == "false") {
-      ele.innerText = "[disable image on hover]"
-      localStorage.setItem("hover_enabled", true)
-      if(document.getElementById("threadList")) {
-        hoverEnableFunc(threadList.getElementsByClassName("uploadCell"))
-      }
-    } else {
-      ele.innerText = "[enable image on hover]"
-      if(document.getElementById("threadList")) {
-        var imgs = threadList.getElementsByClassName("uploadCell")
-        for (var i = 0; i < imgs.length; i++) {
-          imgs[i].lastElementChild.onmouseover = null
-          imgs[i].lastElementChild.onmouseout = null
-        }
-      }
-      localStorage.setItem("hover_enabled", false)
-    }
-  }
-  return ele
-}
-
 function styleForSettingsWindow() {
   var style = document.createElement("style")
   style.id = "settings_screen_style"
@@ -208,25 +152,7 @@ function settingsElement(applyHoverImgEvent) {
   var settingsScreen = document.createElement("div")
   settingsScreen.classList.add("settings")
   
-  let setting1 = document.createElement("label")
-  let setting2 = document.createElement("label")
-  let setting3 = document.createElement("label")
-  
-  let input1 = document.createElement("input")
-  let input2 = document.createElement("input")
-  let input3 = document.createElement("input")
-  
-  let description1 = document.createElement("span")
-  let description2 = document.createElement("span")
-  let description3 = document.createElement("span")
-  
-  description1.innerText = "Quick Reply Shortcuts"
-  description2.innerText = "Image Hover"
-  description3.innerText = "Small Thumbnails"
-  
-  input1.type = "checkbox"
-  input1.checked = (localStorage.getItem("qrshortcuts") == "true")
-  input1.onchange = function() {
+  function qrShortcutsSettingOnclick() {
     if (localStorage.getItem("qrshortcuts") == "false") {
       document.onkeydown = KeyPress
       localStorage.setItem("qrshortcuts", true)
@@ -235,11 +161,7 @@ function settingsElement(applyHoverImgEvent) {
       localStorage.setItem("qrshortcuts", false)
     }
   }
-  
-    
-  input2.type = "checkbox"
-  input2.checked = (localStorage.getItem("hover_enabled") == "true")
-  input2.onchange = function() {
+  function hoverImageSettingOnclick() {
     if (localStorage.getItem("hover_enabled") == "false") {
       localStorage.setItem("hover_enabled", true)
       if(document.getElementById("threadList")) {
@@ -256,58 +178,48 @@ function settingsElement(applyHoverImgEvent) {
       localStorage.setItem("hover_enabled", false)
     }
   }
-    
-  input3.type = "checkbox"
-  input3.checked = (localStorage.getItem("smallThumbs_enabled") == "true")
-  let style = document.createElement("style")
-  style.id = "image_thumbs_settings"
-  style.type = "text/css"
-  style.innerText = (input3.checked) ? ' \
-    a.imgLink img:not([class="imgExpanded"]), \
-    .uploadCell span img:not([class="imgExpanded"]){ \
-      height: auto; \
-      width: auto; \
-      max-width: 125px; \
-      max-height: 125px; \
-    } \
-  ' : 'a.imgLink img:not([class="imgExpanded"]) {}'
-  input3.onchange = function() {
+  function smallThumbsSettingOnclick() {
     if (localStorage.getItem("smallThumbs_enabled") == "true") {
       localStorage.setItem("smallThumbs_enabled", false)
-      image_thumbs_settings.innerText =  
-        style.innerText = '/*\
-        a.imgLink img:not([class="imgExpanded"]), \
-        .uploadCell span img:not([class="imgExpanded"]){ \
-          height: auto; \
-          width: auto; \
-          max-width: 125px; \
-          max-height: 125px; \
-        }*/'
+      image_thumbs_settings.innerText = '/*\
+      a.imgLink img:not([class="imgExpanded"]), \
+      .uploadCell span img:not([class="imgExpanded"]){ \
+        height: auto; \
+        width: auto; \
+        max-width: 125px; \
+        max-height: 125px; \
+      }*/'
     } else {
       localStorage.setItem("smallThumbs_enabled", "true")
-      image_thumbs_settings.innerText =  
-        style.innerText = ' \
-        a.imgLink img:not([class="imgExpanded"]), \
-        .uploadCell span img:not([class="imgExpanded"]){ \
-          height: auto; \
-          width: auto; \
-          max-width: 125px; \
-          max-height: 125px; \
-        }'
+      image_thumbs_settings.innerText = ' \
+      a.imgLink img:not([class="imgExpanded"]), \
+      .uploadCell span img:not([class="imgExpanded"]){ \
+        height: auto; \
+        width: auto; \
+        max-width: 125px; \
+        max-height: 125px; \
+      }'
     }
   }
   
-  setting1.appendChild(input1) 
-  setting1.appendChild(description1)
-  setting2.appendChild(input2)
-  setting2.appendChild(description2)
-  setting3.appendChild(input3)
-  setting3.appendChild(description3)
-  
-  settingsScreen.appendChild(setting1)
-  settingsScreen.appendChild(setting2)
-  settingsScreen.appendChild(setting3)
-  
+  function createSettingOption(text, checked, func) {
+    let setting = document.createElement("label")
+    let input = document.createElement("input")
+    let description = document.createElement("span")
+    
+    input.type = "checkbox"
+    input.checked = checked
+    input.onchange = func
+    description.innerText = text
+    
+    setting.appendChild(input)
+    setting.appendChild(description)
+    return setting
+  }
+  settingsScreen.appendChild(createSettingOption("Quick Reply Shortcuts", (localStorage.getItem("qrshortcuts") == "true"), qrShortcutsSettingOnclick))
+  settingsScreen.appendChild(createSettingOption("Image Hover", (localStorage.getItem("hover_enabled") == "true"), hoverImageSettingOnclick))
+  settingsScreen.appendChild(createSettingOption("Small Thumbnails", (localStorage.getItem("smallThumbs_enabled") == "true"), smallThumbsSettingOnclick))
+
   settingsBox.appendChild(settingsScreen)
   settingsBox.style.display = "none"
   settingsBox.style.zIndex = "100"
@@ -327,8 +239,6 @@ function settingsElement(applyHoverImgEvent) {
     e.stopPropagation()
   }
   
-  document.body.after(styleForSettingsWindow())
-  document.body.after(style)
   return ele
 }
 
@@ -353,8 +263,6 @@ function readyFn() {
     var window = unsafeWindow
   }
   
-  document.body.firstElementChild.appendChild(qrShortcutElement())
-  document.body.firstElementChild.appendChild(toggleHoverElement(applyHoverImgEvent))
   document.body.firstElementChild.appendChild(settingsElement(applyHoverImgEvent))
   namefield(window)
 
@@ -666,6 +574,22 @@ function KeyPress(e) { //Adds quick shortcuts for markup and posting
   }
 }
 
+function imageThumbsStyle() {
+  let style = document.createElement("style")
+  style.id = "image_thumbs_settings"
+  style.type = "text/css"
+  style.innerText = (localStorage.getItem("smallThumbs_enabled")) ? ' \
+    a.imgLink img:not([class="imgExpanded"]), \
+    .uploadCell span img:not([class="imgExpanded"]){ \
+      height: auto; \
+      width: auto; \
+      max-width: 125px; \
+      max-height: 125px; \
+    } \
+  ' : 'a.imgLink img:not([class="imgExpanded"]) {}'
+  return style
+}
+
 (function() { //fixes post counter and in turn, also post hiding
   var orig = document.getElementsByClassName.bind(document);
   document.getElementsByClassName = (function(str) {
@@ -675,5 +599,7 @@ function KeyPress(e) { //Adds quick shortcuts for markup and posting
           return orig(str);
       }
   });
+  document.firstElementChild.appendChild(styleForSettingsWindow())
+  document.firstElementChild.appendChild(imageThumbsStyle())
 }).call();
 
