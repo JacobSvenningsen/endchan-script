@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.7
+// @version       1.1.8
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -417,34 +417,38 @@ function readyFn() {
   
   function embeddedLinkHover(e) {
     var linked = document.getElementById(this.innerText.slice(2).split(" ")[0])
-    if (linked) {
-      var node = linked.cloneNode(true);
-      node.id = "appendedNode"
-      node.style.position = "fixed"
-      node.style.left = e.clientX + 10 + 'px'
-      var id = node.getElementsByClassName("labelId")[0]
-      if (id) {
-        id.classList.remove("labelId")
-      }
-      threadList.getElementsByClassName("divPosts")[0].appendChild(node)
-      node.style.top = (e.clientY + appendedNode.clientHeight > window.innerHeight - 10) ? window.innerHeight - appendedNode.clientHeight - 10 + 'px' : e.clientY + 'px'
+    let node = linked.cloneNode(true);
+    node.id = "appendedNode"    
+    node.style.position = "fixed"
+    var id = node.getElementsByClassName("labelId")[0]
+    if (id) {
+      id.classList.remove("labelId")
     }
+    node.style.left = e.clientX + 10 + 'px'  
+    threadList.getElementsByClassName("divPosts")[0].appendChild(node)
+    node.style.top = (e.clientY + appendedNode.clientHeight > window.innerHeight - 10) ? window.innerHeight - appendedNode.clientHeight - 10 + 'px' : e.clientY + 'px'
   }
   
   function updateLinks(parent, linkStr, updateEvents) {
     var links = parent.getElementsByClassName(linkStr)
     if (linkStr == "quoteLink") {
       for (var i = 0; i < links.length; i++) {
-        links[i].onmouseenter = embeddedLinkHover 
-        links[i].onmouseout = function() { var node = document.getElementById("appendedNode"); if(node) {node.remove()} }
-        insertInlinePost(links[i])
+        if (document.getElementById(links[i].innerText.slice(2).split(" ")[0])) {
+          links[i].onmouseenter = embeddedLinkHover 
+          links[i].onmouseout = function() { var node = document.getElementById("appendedNode"); if(node) {node.remove()} }
+          insertInlinePost(links[i])
+        } else {
+          links[i].innerText += " (cross-thread)"
+        }
       }
     } else {
       for (var i = 0; i < links.length; i++) {
-        links[i].childNodes.forEach(function(quote) { 
-          quote.onmouseenter = embeddedLinkHover
-          quote.onmouseout = function() { var node = document.getElementById("appendedNode"); if(node) {node.remove()} }
-          insertInlinePost(quote);
+        links[i].childNodes.forEach(function(quote) {
+          if (quote.tagName == "A" && document.getElementById(quote.innerText.slice(2).split(" ")[0])) {
+            quote.onmouseenter = embeddedLinkHover
+            quote.onmouseout = function() { var node = document.getElementById("appendedNode"); if(node) {node.remove()} }
+            insertInlinePost(quote);
+          }
         })
       }
     }
@@ -598,4 +602,5 @@ function imageThumbsStyle() {
   document.firstElementChild.appendChild(styleForSettingsWindow())
   document.firstElementChild.appendChild(imageThumbsStyle())
 }).call();
+
 
