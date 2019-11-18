@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.9
+// @version       1.1.10
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -10,6 +10,7 @@
 // @updateURL     https://github.com/JacobSvenningsen/endchan-script/raw/master/script.user.js
 // @downloadURL   https://github.com/JacobSvenningsen/endchan-script/raw/master/script.user.js
 // ==/UserScript==
+
 
 function setNodeStyle(ele) {
   ele.style.position = "fixed"
@@ -203,6 +204,15 @@ function settingsElement(applyHoverImgEvent) {
     }
   }
   
+  function changeRefreshInterval() {
+    if(this.value > this.max) {
+      this.value = this.max
+    } else if(this.value < this.min) {
+      this.value = this.min
+    }
+    localStorage.setItem("refreshInterval", this.value)
+  }
+  
   function createSettingOption(text, checked, func) {
     let setting = document.createElement("label")
     let input = document.createElement("input")
@@ -217,9 +227,23 @@ function settingsElement(applyHoverImgEvent) {
     setting.appendChild(description)
     return setting
   }
+  
+  function createPreferedRefreshTimeOption(text, func) {
+    let setting = createSettingOption(text, false, func)
+    setting.firstElementChild.type = "number"
+    setting.firstElementChild.min="10" 
+    setting.firstElementChild.max="600"
+    setting.firstElementChild.value=localStorage.getItem("refreshInterval")
+    setting.firstElementChild.onchange=null
+    setting.firstElementChild.oninput=func
+    return setting
+  }
+  
   settingsScreen.appendChild(createSettingOption("Quick Reply Shortcuts", (localStorage.getItem("qrshortcuts") == "true"), qrShortcutsSettingOnclick))
   settingsScreen.appendChild(createSettingOption("Image Hover", (localStorage.getItem("hover_enabled") == "true"), hoverImageSettingOnclick))
   settingsScreen.appendChild(createSettingOption("Small Thumbnails", (localStorage.getItem("smallThumbs_enabled") == "true"), smallThumbsSettingOnclick))
+  settingsScreen.appendChild(createPreferedRefreshTimeOption("Prefered Autorefresh Interval", changeRefreshInterval))
+  
 
   settingsBox.appendChild(settingsScreen)
   settingsBox.style.display = "none"
@@ -259,10 +283,61 @@ function namefield(window) {
   }
 }
 
+
+    
+function updatePosts(userdefined_refresh) {
+  clearInterval(refreshTimer);
+  if (autoRefresh) {
+    currentRefresh = userdefined_refresh;
+    clearInterval(refreshTimer);
+    limitRefreshWait = currentRefresh
+    refreshTimer = setInterval(function checkTimer() {
+      currentRefresh--;
+
+      if (!currentRefresh) {
+        refreshPosts();
+        labelRefresh.innerHTML = '';
+        clearInterval(refreshTimer);
+        clearInterval(refreshTimer);
+        currentRefresh = userdefined_refresh;
+      } else {
+        labelRefresh.innerHTML = currentRefresh;
+      }
+
+    }, 1000);
+  }
+}
+
 function readyFn() {
   if (GM) {
     var window = unsafeWindow
   }
+  
+  let refreshInterval = localStorage.getItem("refreshInterval")
+  if(!refreshInterval) {
+    localStorage.setItem("refreshInterval", 60)
+    refreshInterval = 60
+  } else {
+    refreshInterval = parseInt(refreshInterval)
+  }
+  
+  clearInterval(refreshTimer);
+  updatePosts(refreshInterval)
+  clearInterval(refreshTimer);
+  var oldXHR = window.XMLHttpRequest;
+  function newXHR() {
+    var realXHR = new oldXHR();
+    realXHR.addEventListener("readystatechange", function() {
+      if(realXHR.readyState==4 && realXHR.status==200) {
+        setTimeout(function() {
+          clearInterval(refreshTimer);
+          updatePosts(parseInt(localStorage.getItem("refreshInterval")))
+        }, 1)
+      }
+    }, false);
+    return realXHR;
+  }
+  window.XMLHttpRequest = newXHR;
   
   document.body.firstElementChild.appendChild(settingsElement(applyHoverImgEvent))
   namefield(window)
@@ -434,7 +509,8 @@ function readyFn() {
     var links = parent.getElementsByClassName(linkStr)
     if (linkStr == "quoteLink") {
       for (var i = 0; i < links.length; i++) {
-        if (document.getElementById(links[i].innerText.slice(2).split(" ")[0])) {
+        let d = document.getElementById(links[i].innerText.slice(2).split(" ")[0])
+        if (d && !d.classList.contains("opCell")) {
           links[i].onmouseenter = embeddedLinkHover 
           links[i].onmouseout = function() { var node = document.getElementById("appendedNode"); if(node) {node.remove()} }
           insertInlinePost(links[i])
