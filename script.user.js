@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.10
+// @version       1.1.11
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -321,24 +321,25 @@ function readyFn() {
     refreshInterval = parseInt(refreshInterval)
   }
   
-  clearInterval(refreshTimer);
-  updatePosts(refreshInterval)
-  clearInterval(refreshTimer);
-  var oldXHR = window.XMLHttpRequest;
-  function newXHR() {
-    var realXHR = new oldXHR();
-    realXHR.addEventListener("readystatechange", function() {
-      if(realXHR.readyState==4 && realXHR.status==200) {
-        setTimeout(function() {
-          clearInterval(refreshTimer);
-          updatePosts(parseInt(localStorage.getItem("refreshInterval")))
-        }, 1)
-      }
-    }, false);
-    return realXHR;
+  if(typeof refreshTimer !== "undefined") {
+    clearInterval(refreshTimer);
+    updatePosts(refreshInterval)
+    clearInterval(refreshTimer);
+    var oldXHR = window.XMLHttpRequest;
+    function newXHR() {
+      var realXHR = new oldXHR();
+      realXHR.addEventListener("readystatechange", function() {
+        if(realXHR.readyState==4 && realXHR.status==200) {
+          setTimeout(function() {
+            clearInterval(refreshTimer);
+            updatePosts(parseInt(localStorage.getItem("refreshInterval")))
+          }, 1)
+        }
+      }, false);
+      return realXHR;
+    }
+    window.XMLHttpRequest = newXHR;
   }
-  window.XMLHttpRequest = newXHR;
-  
   document.body.firstElementChild.appendChild(settingsElement(applyHoverImgEvent))
   namefield(window)
 
