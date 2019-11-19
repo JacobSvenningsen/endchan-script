@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.11
+// @version       1.1.12
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -211,6 +211,7 @@ function settingsElement(applyHoverImgEvent) {
       this.value = this.min
     }
     localStorage.setItem("refreshInterval", this.value)
+    limitRefreshWait = parseInt(this.value)
   }
   
   function createSettingOption(text, checked, func) {
@@ -283,31 +284,6 @@ function namefield(window) {
   }
 }
 
-
-    
-function updatePosts(userdefined_refresh) {
-  clearInterval(refreshTimer);
-  if (autoRefresh) {
-    currentRefresh = userdefined_refresh;
-    clearInterval(refreshTimer);
-    limitRefreshWait = currentRefresh
-    refreshTimer = setInterval(function checkTimer() {
-      currentRefresh--;
-
-      if (!currentRefresh) {
-        refreshPosts();
-        labelRefresh.innerHTML = '';
-        clearInterval(refreshTimer);
-        clearInterval(refreshTimer);
-        currentRefresh = userdefined_refresh;
-      } else {
-        labelRefresh.innerHTML = currentRefresh;
-      }
-
-    }, 1000);
-  }
-}
-
 function readyFn() {
   if (GM) {
     var window = unsafeWindow
@@ -322,23 +298,7 @@ function readyFn() {
   }
   
   if(typeof refreshTimer !== "undefined") {
-    clearInterval(refreshTimer);
-    updatePosts(refreshInterval)
-    clearInterval(refreshTimer);
-    var oldXHR = window.XMLHttpRequest;
-    function newXHR() {
-      var realXHR = new oldXHR();
-      realXHR.addEventListener("readystatechange", function() {
-        if(realXHR.readyState==4 && realXHR.status==200) {
-          setTimeout(function() {
-            clearInterval(refreshTimer);
-            updatePosts(parseInt(localStorage.getItem("refreshInterval")))
-          }, 1)
-        }
-      }, false);
-      return realXHR;
-    }
-    window.XMLHttpRequest = newXHR;
+    limitRefreshWait = parseInt(localStorage.getItem("refreshInterval"))
   }
   document.body.firstElementChild.appendChild(settingsElement(applyHoverImgEvent))
   namefield(window)
@@ -581,6 +541,9 @@ function readyFn() {
     updateLinks(threadList, "quoteLink")
     observer = new MutationObserver(updateNewPosts)
     observer.observe(threadList.getElementsByClassName("divPosts")[0], {childList:true}) // element to observe for changes, and conf
+    if(typeof refreshTimer !== "undefined" && currentRefresh > parseInt(localStorage.getItem("refreshInterval"))) {
+      currentRefresh = parseInt(localStorage.getItem("refreshInterval"))
+    }
   }
 }
 window.onload = readyFn
