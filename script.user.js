@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.14
+// @version       1.1.15
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -222,6 +222,10 @@ function settingsElement(applyHoverImgEvent) {
     if (!checked) {
       checked = false
       localStorage.setItem(item, false)
+    } else if (checked == "false") {
+      checked = false
+    } else {
+      checked = true
     }
     input.type = "checkbox"
     input.checked = checked
@@ -663,7 +667,7 @@ function imageThumbsStyle() {
   let style = document.createElement("style")
   style.id = "image_thumbs_settings"
   style.type = "text/css"
-  style.innerText = (localStorage.getItem("smallThumbs_enabled")) ? ' \
+  style.innerText = (localStorage.getItem("smallThumbs_enabled") == "true") ? ' \
     a.imgLink img:not([class="imgExpanded"]), \
     .uploadCell span img:not([class="imgExpanded"]){ \
       height: auto; \
@@ -692,3 +696,4 @@ function imageThumbsStyle() {
     document.onkeydown = null
   }
 }).call();
+
