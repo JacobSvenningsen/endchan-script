@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.12
+// @version       1.1.13
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -10,7 +10,6 @@
 // @updateURL     https://github.com/JacobSvenningsen/endchan-script/raw/master/script.user.js
 // @downloadURL   https://github.com/JacobSvenningsen/endchan-script/raw/master/script.user.js
 // ==/UserScript==
-
 
 function setNodeStyle(ele) {
   ele.style.position = "fixed"
@@ -507,18 +506,56 @@ function readyFn() {
     }
   }
   
+  function addCounters() {
+    let parent = document.createElement("span")
+    let postCounter = document.createElement("div")
+    let imgCounter = document.createElement("div")
+    let separator = document.createElement("text")
+    
+    postCounter.id = "postCounter"
+    imgCounter.id = "imgCounter"
+    
+    parent.style.float = "right"
+    parent.style.position = "absolute"
+    parent.style.marginRight = "10px"
+    parent.style.height = "inherit"
+    parent.style.display = "inline"
+    parent.style.right = "0px"
+    parent.title = "posts / files"
+    
+    postCounter.innerText = threadList.getElementsByClassName("postCell").length
+    imgCounter.innerText = threadList.getElementsByClassName("uploadCell").length
+    separator.innerText = " / "
+    
+    postCounter.style.display = "inline"
+    imgCounter.style.display = "inline"
+    parent.appendChild(postCounter)
+    parent.appendChild(separator)
+    parent.appendChild(imgCounter)
+    
+    document.getElementsByClassName("divRefresh")[0].firstElementChild.after(parent)
+  }
+  
+  function updateCounters(node) {
+    postCounter.innerText = parseInt(postCounter.innerText) + 1
+    imgCounter.innerText = parseInt(imgCounter.innerText) + node.getElementsByClassName("uploadCell").length
+  }
+  
   const updateNewPosts = function(list, observer) {
     for(let mutation of list) {
       if (mutation.type === 'childList') {
         mutation.addedNodes.forEach(function(node) {
-          setLoop(node.getElementsByTagName("video"))
-          applyHoverImgEvent(node.getElementsByClassName("uploadCell"))
-          insertBreak(node.getElementsByClassName("divMessage"))
-          setIdTextColor(node.getElementsByClassName("labelId"))
-          replaceLinkQuoting(node.getElementsByClassName("linkQuote"))
-          hidePost(node)
-          updateLinks(node, "quoteLink")
-          updateNewlyCreatedBacklinks(node)
+            if (node.id !== "appendedNode") {
+            setLoop(node.getElementsByTagName("video"))
+            applyHoverImgEvent(node.getElementsByClassName("uploadCell"))
+            insertBreak(node.getElementsByClassName("divMessage"))
+            setIdTextColor(node.getElementsByClassName("labelId"))
+            replaceLinkQuoting(node.getElementsByClassName("linkQuote"))
+            hidePost(node)
+            updateLinks(node, "quoteLink")
+            updateNewlyCreatedBacklinks(node)
+            updateCounters(node)
+          }
         })
       }
     }
@@ -544,6 +581,7 @@ function readyFn() {
     if(typeof refreshTimer !== "undefined" && currentRefresh > parseInt(localStorage.getItem("refreshInterval"))) {
       currentRefresh = parseInt(localStorage.getItem("refreshInterval"))
     }
+    addCounters()
   }
 }
 window.onload = readyFn
