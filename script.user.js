@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.13
+// @version       1.1.14
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -213,11 +213,16 @@ function settingsElement(applyHoverImgEvent) {
     limitRefreshWait = parseInt(this.value)
   }
   
-  function createSettingOption(text, checked, func) {
+  function createSettingOption(text, item, func) {
     let setting = document.createElement("label")
     let input = document.createElement("input")
     let description = document.createElement("span")
     
+    let checked = localStorage.getItem(item)
+    if (!checked) {
+      checked = false
+      localStorage.setItem(item, false)
+    }
     input.type = "checkbox"
     input.checked = checked
     input.onchange = func
@@ -225,11 +230,12 @@ function settingsElement(applyHoverImgEvent) {
     
     setting.appendChild(input)
     setting.appendChild(description)
+    
     return setting
   }
   
   function createPreferedRefreshTimeOption(text, func) {
-    let setting = createSettingOption(text, false, func)
+    let setting = createSettingOption(text, "refreshInterval", func)
     setting.firstElementChild.type = "number"
     setting.firstElementChild.min="10" 
     setting.firstElementChild.max="600"
@@ -239,9 +245,9 @@ function settingsElement(applyHoverImgEvent) {
     return setting
   }
   
-  settingsScreen.appendChild(createSettingOption("Quick Reply Shortcuts", (localStorage.getItem("qrshortcuts") == "true"), qrShortcutsSettingOnclick))
-  settingsScreen.appendChild(createSettingOption("Image Hover", (localStorage.getItem("hover_enabled") == "true"), hoverImageSettingOnclick))
-  settingsScreen.appendChild(createSettingOption("Small Thumbnails", (localStorage.getItem("smallThumbs_enabled") == "true"), smallThumbsSettingOnclick))
+  settingsScreen.appendChild(createSettingOption("Quick Reply Shortcuts", "qrshortcuts", qrShortcutsSettingOnclick))
+  settingsScreen.appendChild(createSettingOption("Image Hover", "hover_enabled", hoverImageSettingOnclick))
+  settingsScreen.appendChild(createSettingOption("Small Thumbnails", "smallThumbs_enabled", smallThumbsSettingOnclick))
   settingsScreen.appendChild(createPreferedRefreshTimeOption("Prefered Autorefresh Interval", changeRefreshInterval))
   
 
@@ -606,7 +612,7 @@ function KeyPress(e) { //Adds quick shortcuts for markup and posting
 
   if (evtobj.ctrlKey) {
     if (evtobj.shiftKey && evtobj.keyCode == 70) { //code shift+F
-        qrbody.insertAtCaret("[code]","[/code]");
+        insertAtCaret("[code]","[/code]");
         e.preventDefault();     
         e.stopPropagation(); 
     } else {
@@ -686,5 +692,3 @@ function imageThumbsStyle() {
     document.onkeydown = null
   }
 }).call();
-
-
