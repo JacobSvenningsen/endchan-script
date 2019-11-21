@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.15
+// @version       1.1.16
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -298,6 +298,7 @@ function readyFn() {
     var window = unsafeWindow
   }
   
+  let uniqueIds;
   let refreshInterval = localStorage.getItem("refreshInterval")
   if(!refreshInterval) {
     localStorage.setItem("refreshInterval", 60)
@@ -520,7 +521,26 @@ function readyFn() {
     let parent = document.createElement("span")
     let postCounter = document.createElement("div")
     let imgCounter = document.createElement("div")
+    let idCounter = document.createElement("div")
     let separator = document.createElement("text")
+    let ids = threadList.getElementsByClassName("labelId")
+    let idStrings = []
+    
+    separator.innerText = " / "
+    if(ids.length) {
+      for(let i = 0; i < ids.length; i++) {
+        idStrings.push(ids[i].innerText.slice(0,6))
+      }
+      uniqueIds = new Set(idStrings)
+      idCounter.innerText = uniqueIds.size
+      idCounter.id = "idCounter"
+      idCounter.style.display = "inline"
+      parent.title = "ids / posts / files"
+      parent.appendChild(idCounter)
+      parent.appendChild(separator.cloneNode(true))
+    } else {
+      parent.title = "posts / files"
+    }
     
     postCounter.id = "postCounter"
     imgCounter.id = "imgCounter"
@@ -531,24 +551,28 @@ function readyFn() {
     parent.style.height = "inherit"
     parent.style.display = "inline"
     parent.style.right = "0px"
-    parent.title = "posts / files"
     
     postCounter.innerText = threadList.getElementsByClassName("postCell").length
     imgCounter.innerText = threadList.getElementsByClassName("uploadCell").length
-    separator.innerText = " / "
     
     postCounter.style.display = "inline"
     imgCounter.style.display = "inline"
+    
     parent.appendChild(postCounter)
     parent.appendChild(separator)
     parent.appendChild(imgCounter)
     
-    document.getElementsByClassName("divRefresh")[0].firstElementChild.after(parent)
+    if(document.getElementsByClassName("divRefresh")[0]) {
+      document.getElementsByClassName("divRefresh")[0].firstElementChild.after(parent)
+    }
   }
   
   function updateCounters(node) {
     postCounter.innerText = parseInt(postCounter.innerText) + 1
     imgCounter.innerText = parseInt(imgCounter.innerText) + node.getElementsByClassName("uploadCell").length
+    if(uniqueIds) {
+      idCounter.innerText = uniqueIds.add(node.getElementsById("labelId")[0].innerText.slice(0,6)).size
+    }
   }
   
   const updateNewPosts = function(list, observer) {
