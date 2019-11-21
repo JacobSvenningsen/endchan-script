@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.16
+// @version       1.1.17
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -571,7 +571,7 @@ function readyFn() {
     postCounter.innerText = parseInt(postCounter.innerText) + 1
     imgCounter.innerText = parseInt(imgCounter.innerText) + node.getElementsByClassName("uploadCell").length
     if(uniqueIds) {
-      idCounter.innerText = uniqueIds.add(node.getElementsById("labelId")[0].innerText.slice(0,6)).size
+      idCounter.innerText = uniqueIds.add(node.getElementsByClassName("labelId")[0].innerText.slice(0,6)).size
     }
   }
   
