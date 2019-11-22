@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.17
+// @version       1.1.18
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -151,7 +151,7 @@ function settingsElement(applyHoverImgEvent) {
   
   var settingsBox = document.createElement("div")
   settingsBox.id = "settingsWindow"
-  settingsBox.style.backgroundColor = window.getComputedStyle(document.getElementsByClassName("innerPost")[0]).backgroundColor
+  settingsBox.style.backgroundColor = window.getComputedStyle(document.getElementsByTagName("NAV")[0]).backgroundColor
   //settingsBox.classList.add("closed")
   
   var header = document.createElement("h1")
