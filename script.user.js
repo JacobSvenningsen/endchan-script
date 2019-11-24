@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.18
+// @version       1.1.19
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -510,6 +510,10 @@ function readyFn() {
         var backlinks = ele.getElementsByClassName("panelBacklinks")
         for (var j = 0; j < backlinks.length; j++) {
           backlinks[j].childNodes.forEach(insertInlinePost)
+          backlinks[j].childNodes.forEach(function(link) {
+            link.onmouseenter = embeddedLinkHover
+            link.onmouseout = function() { var node = document.getElementById("appendedNode"); if(node) {node.remove()} }
+          })
         }
       } else {
         quotes[i].innerText = quotes[i].innerText.endsWith("thread)") ? quotes[i].innerText : quotes[i].innerText+" (cross-thread)"
