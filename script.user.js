@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.19
+// @version       1.1.20
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -139,7 +139,8 @@ function qrShortcutsSettingOnclick() {
   }
 }
 
-function settingsElement(applyHoverImgEvent) {
+function settingsElement(applyHoverImgEvent, window) {
+  let oldXHR = window.XMLHttpRequest
   var ele = document.createElement("a")
   ele.innerText = "[script settings]"
   let url = document.URL.split("#")[0]
@@ -213,6 +214,32 @@ function settingsElement(applyHoverImgEvent) {
     limitRefreshWait = parseInt(this.value)
   }
   
+  function toggleForceReattemptRefresh() {
+    if (localStorage.getItem("force_refresh") == "true") {
+      window.XMLHttpRequest = oldXHR
+      localStorage.setItem("force_refresh", false)
+    } else {
+      let refreshField = document.getElementsByClassName("divRefresh hidden")[0]
+      if (refreshField) {
+        refreshField = refreshField.firstElementChild.firstElementChild
+        if (refreshField.checked) {
+          window.XMLHttpRequest = function() {
+            var realXHR = new oldXHR();
+            realXHR.addEventListener("readystatechange", function() {
+              if(realXHR.readyState==4 && realXHR.status==404) {
+                console.log("retrieved 404, refreshing after prefered interval anyway")
+                clearInterval(refreshTimer)
+                startTimer(parseInt(localStorage.getItem("refreshInterval")))
+              }
+            }, false);
+            return realXHR;
+          }
+        } 
+      }
+      localStorage.setItem("force_refresh", true)
+    }
+  }
+  
   function createSettingOption(text, item, func) {
     let setting = document.createElement("label")
     let input = document.createElement("input")
@@ -253,7 +280,9 @@ function settingsElement(applyHoverImgEvent) {
   settingsScreen.appendChild(createSettingOption("Image Hover", "hover_enabled", hoverImageSettingOnclick))
   settingsScreen.appendChild(createSettingOption("Small Thumbnails", "smallThumbs_enabled", smallThumbsSettingOnclick))
   settingsScreen.appendChild(createPreferedRefreshTimeOption("Prefered Autorefresh Interval", changeRefreshInterval))
-  
+  settingsScreen.appendChild(createSettingOption("Retry refreshing despite getting return code 404", "force_refresh", toggleForceReattemptRefresh))
+  toggleForceReattemptRefresh()
+  toggleForceReattemptRefresh()
 
   settingsBox.appendChild(settingsScreen)
   settingsBox.style.display = "none"
@@ -310,7 +339,7 @@ function readyFn() {
   if(typeof refreshTimer !== "undefined") {
     limitRefreshWait = parseInt(localStorage.getItem("refreshInterval"))
   }
-  document.body.firstElementChild.appendChild(settingsElement(applyHoverImgEvent))
+  document.body.firstElementChild.appendChild(settingsElement(applyHoverImgEvent, window))
   namefield(window)
 
   function setLoop(posts) {
@@ -724,4 +753,5 @@ function imageThumbsStyle() {
     document.onkeydown = null
   }
 }).call();
+
 
