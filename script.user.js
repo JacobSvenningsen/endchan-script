@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.20
+// @version       1.1.21
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -161,7 +161,7 @@ function settingsElement(applyHoverImgEvent, window) {
   settingsBox.appendChild(document.createElement("hr"))
   
   var settingsScreen = document.createElement("div")
-  settingsScreen.classList.add("settings")
+  settingsScreen.id = "settings"
   
   function hoverImageSettingOnclick() {
     if (localStorage.getItem("hover_enabled") == "false") {
@@ -257,17 +257,20 @@ function settingsElement(applyHoverImgEvent, window) {
     input.type = "checkbox"
     input.checked = checked
     input.onchange = func
+    input.style.marginRight = "4px"
+    input.style.marginLeft = "4px"
     description.innerText = text
     
     setting.appendChild(input)
     setting.appendChild(description)
-    
+    setting.classList.add("setting")
     return setting
   }
   
   function createPreferedRefreshTimeOption(text, func) {
     let setting = createSettingOption(text, "refreshInterval", func)
     setting.firstElementChild.type = "number"
+    setting.firstElementChild.style.width = "80px"
     setting.firstElementChild.min="10" 
     setting.firstElementChild.max="600"
     setting.firstElementChild.value=localStorage.getItem("refreshInterval")
@@ -753,5 +756,6 @@ function imageThumbsStyle() {
     document.onkeydown = null
   }
 }).call();
+
 
 
