@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.24
+// @version       1.1.25
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -416,7 +416,7 @@ function readyFn() {
           if (document.getElementById("qrbody")) {
             let selection = window.getSelection().toString()
             // where we paste in quote and marked text. 3 indicates the quote sign ">>" and '\n'
-            let pos = qrbody.selectionStart + e.originalTarget.innerText.length + selection.length + 3
+            let pos = qrbody.selectionStart + e.target.innerText.length + selection.length + 3
             if (selection.length > 0) {
               pos += 2 // post is surely marked. Add 2 for '>' + '\n'
             }
