@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.23
+// @version       1.1.24
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -410,21 +410,26 @@ function readyFn() {
         var toQuote = this.innerText;
 
         if (typeof add_quick_reply_quote != "undefined") {
-          let selection = window.getSelection().toString()
-          // where we paste in quote and marked text. 3 indicates the quote sign ">>" and '\n'
-          let pos = qrbody.selectionStart + e.originalTarget.innerText.length + selection.length + 3
-          if (selection.length > 0) {
-            pos += 2 // post is surely marked. Add 2 for '>' + '\n'
+          if (!document.getElementById("qrbody") && window.show_quick_reply) {
+            window.show_quick_reply()
           }
-          for (let i = 0; i < selection.length-1; i++) { //each additional newline requires position to be moved by 1 more. Newline already part of selection
-            if (selection[i] === '\n') {
-              pos += 1 // '>'
+          if (document.getElementById("qrbody")) {
+            let selection = window.getSelection().toString()
+            // where we paste in quote and marked text. 3 indicates the quote sign ">>" and '\n'
+            let pos = qrbody.selectionStart + e.originalTarget.innerText.length + selection.length + 3
+            if (selection.length > 0) {
+              pos += 2 // post is surely marked. Add 2 for '>' + '\n'
             }
+            for (let i = 0; i < selection.length-1; i++) { //each additional newline requires position to be moved by 1 more. Newline already part of selection
+              if (selection[i] === '\n') {
+                pos += 1 // '>'
+              }
+            }
+            add_quick_reply_quote(toQuote);
+            qrbody.focus()
+            qrbody.selectionStart = pos
+            qrbody.selectionEnd = pos
           }
-          add_quick_reply_quote(toQuote);
-          qrbody.focus()
-          qrbody.selectionStart = pos
-          qrbody.selectionEnd = pos
         }
 
         document.getElementById('fieldMessage').value += '>>' + toQuote + '\n';
