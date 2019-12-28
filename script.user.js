@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.26
+// @version       1.1.27
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -673,7 +673,7 @@ function readyFn() {
     if(typeof refreshTimer !== "undefined" && currentRefresh > parseInt(localStorage.getItem("refreshInterval"))) {
       currentRefresh = parseInt(localStorage.getItem("refreshInterval"))
     }
-    jsButton.onclick = function() {postReply(); if(document.getElementById("qrbody")) {qrbody.value = ""}}
+    if (postReply) {jsButton.onclick = function() {postReply(); if(document.getElementById("qrbody")) {qrbody.value = ""}}}
     addCounters()
   }
 }
