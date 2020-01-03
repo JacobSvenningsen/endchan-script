@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.27
+// @version       1.1.28
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -378,6 +378,8 @@ function readyFn() {
       var o = Math.round(((rgb[0] * 299) + (rgb[1] * 587) + (rgb[2] * 114)) / 1000);
       var color = (o > 125) ? 'black' : 'white';
       eles[i].style.color = color 
+      eles[i].style.borderRadius = "5px"
+      eles[i].style.padding = "0 4px 0"
     }
   }
   
