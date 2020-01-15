@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.28
+// @version       1.1.29
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -75,7 +75,7 @@ function mouseoverfunc() {
     document.body.prepend(newnode)
   }
   newnode.onclick = function() {
-    removeElement(this)
+    this.remove()
   }
 }
 
@@ -675,7 +675,7 @@ function readyFn() {
     if(typeof refreshTimer !== "undefined" && currentRefresh > parseInt(localStorage.getItem("refreshInterval"))) {
       currentRefresh = parseInt(localStorage.getItem("refreshInterval"))
     }
-    if (postReply) {jsButton.onclick = function() {postReply(); if(document.getElementById("qrbody")) {qrbody.value = ""}}}
+    if (document.getElementById('postreply')) {jsButton.onclick = function() {postReply(); if(document.getElementById("qrbody")) {qrbody.value = ""}}}
     addCounters()
   }
 }
@@ -781,6 +781,7 @@ function imageThumbsStyle() {
     document.onkeydown = null
   }
 }).call();
+
 
 
 
