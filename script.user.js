@@ -1,12 +1,14 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.1.29
+// @version       1.2.0
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
 // @grant         unsafeWindow
 // @include       http://endchan.net/*
 // @include       https://endchan.net/*
+// @include       http://endchan.org/*
+// @include       https://endchan.org/*
 // @updateURL     https://github.com/JacobSvenningsen/endchan-script/raw/master/script.user.js
 // @downloadURL   https://github.com/JacobSvenningsen/endchan-script/raw/master/script.user.js
 // ==/UserScript==
