@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.2.2
+// @version       1.2.3
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -341,14 +341,16 @@ function readyFn() {
     refreshInterval = parseInt(refreshInterval)
   }
   
-  let oldRefreshPosts = refreshPosts
-  function newRefreshPosts(manual) {
-    let newRefreshInterval = refreshTimer
-    for (let i = oldRefreshInterval; i <= newRefreshInterval; ++i) {clearInterval(i)}
-    oldRefreshInterval = newRefreshInterval
-    oldRefreshPosts(manual)
+  if (typeof(refreshPosts) === "function") {
+    let oldRefreshPosts = refreshPosts
+    let oldRefreshInterval = 0
+    function newRefreshPosts(manual) {
+      let newRefreshInterval = refreshTimer
+      while (oldRefreshInterval <= newRefreshInterval) {clearInterval(oldRefreshInterval++)}
+      oldRefreshPosts(manual)
+    }
+    refreshPosts = newRefreshPosts
   }
-  refreshPosts = newRefreshPosts
 
   if(typeof refreshTimer !== "undefined") {
     limitRefreshWait = parseInt(localStorage.getItem("refreshInterval"))
