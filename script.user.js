@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.2.3
+// @version       1.2.4
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -342,6 +342,7 @@ function readyFn() {
   }
   
   if (typeof(refreshPosts) === "function") {
+    
     let oldRefreshPosts = refreshPosts
     let oldRefreshInterval = 0
     function newRefreshPosts(manual) {
@@ -349,11 +350,11 @@ function readyFn() {
       while (oldRefreshInterval <= newRefreshInterval) {clearInterval(oldRefreshInterval++)}
       oldRefreshPosts(manual)
     }
-    refreshPosts = newRefreshPosts
+    window.refreshPosts = newRefreshPosts
   }
-
+  
   if(typeof refreshTimer !== "undefined") {
-    limitRefreshWait = parseInt(localStorage.getItem("refreshInterval"))
+    window.limitRefreshWait = parseInt(localStorage.getItem("refreshInterval"))
   }
   document.body.firstElementChild.appendChild(settingsElement(applyHoverImgEvent, window))
   namefield(window)
@@ -794,6 +795,7 @@ function imageThumbsStyle() {
     document.onkeydown = null
   }
 }).call();
+
 
 
 
