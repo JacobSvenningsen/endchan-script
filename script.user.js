@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.2.4
+// @version       1.2.5
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -649,6 +649,10 @@ function readyFn() {
     }
   }
   
+  function updateTime(node) {
+    window.updateTimeNode(node.getElementsByClassName("labelCreated")[0], useLocaltime.checked)
+  }
+  
   const updateNewPosts = function(list, observer) {
     for(let mutation of list) {
       if (mutation.type === 'childList') {
@@ -663,6 +667,7 @@ function readyFn() {
             updateLinks(node, "quoteLink")
             updateNewlyCreatedBacklinks(node)
             updateCounters(node)
+            updateTime(node)
           }
         })
       }
@@ -795,6 +800,7 @@ function imageThumbsStyle() {
     document.onkeydown = null
   }
 }).call();
+
 
 
 
