@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.2.6
+// @version       1.2.7
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -143,6 +143,9 @@ function qrShortcutsSettingOnclick() {
 
 function settingsElement(applyHoverImgEvent, window) {
   let oldXHR = window.XMLHttpRequest
+  let standardQRreplyCallback = window.QRreplyCallback
+  standardQRreplyCallback.progress = window.QRreplyCallback.progress
+  standardQRreplyCallback.stop = window.QRreplyCallback.stop
   var ele = document.createElement("a")
   ele.innerText = "[script settings]"
   let url = document.URL.split("#")[0]
@@ -242,6 +245,24 @@ function settingsElement(applyHoverImgEvent, window) {
     }
   }
   
+  function clearSpoilerFunc() {
+    if (localStorage.getItem("clear_spoiler") == "true") {
+      window.QRreplyCallback = standardQRreplyCallback
+      localStorage.setItem("clear_spoiler", "false")
+    } else {
+      window.QRreplyCallback = function(status, data) {
+        standardQRreplyCallback(status, data);
+        let spoilerbox = document.getElementById('qrcheckboxSpoiler')
+        if(spoilerbox.checked) {
+          spoilerbox.click();
+        }
+      }
+      window.QRreplyCallback.progress = standardQRreplyCallback.progress
+      window.QRreplyCallback.stop = standardQRreplyCallback.stop
+      localStorage.setItem("clear_spoiler", "true")
+    }
+  }
+  
   function createSettingOption(text, item, func) {
     let setting = document.createElement("label")
     let input = document.createElement("input")
@@ -286,8 +307,11 @@ function settingsElement(applyHoverImgEvent, window) {
   settingsScreen.appendChild(createSettingOption("Small Thumbnails", "smallThumbs_enabled", smallThumbsSettingOnclick))
   settingsScreen.appendChild(createPreferedRefreshTimeOption("Prefered Autorefresh Interval", changeRefreshInterval))
   settingsScreen.appendChild(createSettingOption("Retry refreshing despite getting return code 404", "force_refresh", toggleForceReattemptRefresh))
+  settingsScreen.appendChild(createSettingOption("Clear spoiler after post submission", "clear_spoiler", clearSpoilerFunc))
   toggleForceReattemptRefresh()
   toggleForceReattemptRefresh()
+  clearSpoilerFunc()
+  clearSpoilerFunc()
 
   settingsBox.appendChild(settingsScreen)
   settingsBox.style.display = "none"
