@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.2.7
+// @version       1.2.8
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -741,6 +741,12 @@ function readyFn() {
         if (blob !== null) {
           addSelectedFile(blob);
         }
+      }
+      qrbutton.onclick = function (event) {
+        if (selectedFiles[0] || qrbody.textLength) {
+          qrbutton.disabled = true
+        }
+        QRpostReply()
       }
     }
     addCounters()
