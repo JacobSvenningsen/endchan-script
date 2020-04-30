@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.2.8
+// @version       1.2.9
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -143,9 +143,14 @@ function qrShortcutsSettingOnclick() {
 
 function settingsElement(applyHoverImgEvent, window) {
   let oldXHR = window.XMLHttpRequest
-  let standardQRreplyCallback = window.QRreplyCallback
-  standardQRreplyCallback.progress = window.QRreplyCallback.progress
-  standardQRreplyCallback.stop = window.QRreplyCallback.stop
+  var standardQRreplyCallback
+  
+  if (window.QRreplyCallback) {
+    standardQRreplyCallback = window.QRreplyCallback
+    standardQRreplyCallback.progress = window.QRreplyCallback.progress
+    standardQRreplyCallback.stop = window.QRreplyCallback.stop
+  }
+  
   var ele = document.createElement("a")
   ele.innerText = "[script settings]"
   let url = document.URL.split("#")[0]
@@ -246,20 +251,22 @@ function settingsElement(applyHoverImgEvent, window) {
   }
   
   function clearSpoilerFunc() {
-    if (localStorage.getItem("clear_spoiler") == "true") {
-      window.QRreplyCallback = standardQRreplyCallback
-      localStorage.setItem("clear_spoiler", "false")
-    } else {
-      window.QRreplyCallback = function(status, data) {
-        standardQRreplyCallback(status, data);
-        let spoilerbox = document.getElementById('qrcheckboxSpoiler')
-        if(spoilerbox.checked) {
-          spoilerbox.click();
+    if (standardQRreplyCallback) {
+      if (localStorage.getItem("clear_spoiler") == "true") {
+        window.QRreplyCallback = standardQRreplyCallback
+        localStorage.setItem("clear_spoiler", "false")
+      } else {
+        window.QRreplyCallback = function(status, data) {
+          standardQRreplyCallback(status, data);
+          let spoilerbox = document.getElementById('qrcheckboxSpoiler')
+          if(spoilerbox.checked) {
+            spoilerbox.click();
+          }
         }
+        window.QRreplyCallback.progress = standardQRreplyCallback.progress
+        window.QRreplyCallback.stop = standardQRreplyCallback.stop
+        localStorage.setItem("clear_spoiler", "true")
       }
-      window.QRreplyCallback.progress = standardQRreplyCallback.progress
-      window.QRreplyCallback.stop = standardQRreplyCallback.stop
-      localStorage.setItem("clear_spoiler", "true")
     }
   }
   
@@ -854,6 +861,7 @@ function imageThumbsStyle() {
     document.onkeydown = null
   }
 }).call();
+
 
 
 
