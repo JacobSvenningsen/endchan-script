@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.2.9
+// @version       1.2.10
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -351,6 +351,7 @@ function namefield(window) {
       qrname.oninput = function() {
         localStorage.setItem("namefield", qrname.value)
       }
+      qrname.autocomplete = "on"
     }
     fieldName.oninput = function() {
       localStorage.setItem("namefield", fieldName.value)
@@ -359,6 +360,7 @@ function namefield(window) {
 }
 
 function readyFn() {
+  console.log("Running script")
   if (GM) {
     var window = unsafeWindow
   }
@@ -428,27 +430,98 @@ function readyFn() {
     }
   }
   
-  function hidePost(ele) {
-    Object.entries(localStorage).forEach(function(entry) {
-      var name = ele.getElementsByClassName("labelId")[0]
-      if (name) {
-        name = name.innerText.slice(0,6)
-        if (entry[0] == ("hide"+boardUri+"User"+name) && entry[1] == "true") {
-          ele.style.display = "none"
-          if (ele.nextElementSibling === null) {
-            ele.after(document.getElementById("Show"+boardUri+"User"+name))
-          } else {
-            try {
-              if (document.getElementById("Show"+boardUri+"User"+name) !== null && ele.nextElementSibling.id != ("Show"+boardUri+"User"+name)) {
-                ele.after(document.getElementById("Show"+boardUri+"User"+name))
+  function createPostStub(content, classes) {
+    let ele = document.createElement("div")
+    ele.classList.add(classes[0]); ele.classList.add(classes[1]);
+    let c = document.createElement("a")
+    c.innerText = content
+    
+    if (classes[0] === "hiddenUser") {
+      c.onclick = function() {
+        let id = this.innerText.slice(this.innerText.length-7, this.innerText.length-1)
+        localStorage.removeItem("hidden_user_"+boardUri+id)
+        let posts = document.getElementsByClassName("hiddenUser")
+        for (let i = 0; i < posts.length; i++) {
+          if (posts[i].classList.contains(id)) {
+            posts[i].nextElementSibling.style.display = "block"
+          }
+        }
+        let i = posts.length-1;
+        while (i>=0) {posts[i].remove(); i--;}
+        
+      }
+    } else {
+      c.onclick = function() {
+        let num = this.innerText.slice(12+boardUri.length, this.innerText.length-1)
+        localStorage.removeItem("hidden_post_"+boardUri+num)
+        this.parentElement.nextElementSibling.style.display = "block"
+        this.parentElement.remove()
+      }
+    }
+    ele.appendChild(c)
+    
+    return ele    
+  }
+  
+  function addHideUserPosts(node) {
+    let hideUserPosts = node.getElementsByClassName("linkQuote")
+    let hidePost = node.getElementsByClassName("hidePost")
+    
+    if (hideUserPosts.length > 0) {
+      let postNum = node.getElementsByClassName("linkQuote")[0].innerText
+      hideUserPosts = hideUserPosts[0].nextElementSibling.nextElementSibling
+      if (!hideUserPosts.className) {
+        let id = node.getElementsByClassName("labelId")[0].innerText.slice(0,6)
+        hideUserPosts.id = "hide_"+boardUri+"_"+"_User_"+id
+        hideUserPosts.onclick = function() {
+          let threads = document.getElementsByClassName("opCell")
+          localStorage.setItem("hidden_user_"+boardUri+id, id)
+     
+          for (let i = 0; i < threads.length; i++) {
+            var posts = threads[i].getElementsByClassName("postCell")
+            for (let j = 0; j < posts.length; j++) {
+              let tid = posts[j].getElementsByClassName("labelId")[0] 
+              if (tid && tid.innerText.slice(0,6) === id) {
+                let stub = createPostStub("[Show hidden user " + id + "]", ["hiddenUser", id])
+                posts[j].before(stub)
+                posts[j].style.display = "none"
               }
-            } catch(err) {
-              
             }
           }
         }
       }
-    })
+    
+      if (hidePost[0]) {
+        hidePost[0].id = "hide_"+boardUri+"_PostNumber_"+postNum
+      }
+      hidePost[0].onclick = function(e) {
+        localStorage.setItem("hidden_post_"+boardUri+postNum, postNum)
+        let stub = createPostStub("[Show hidden post " + postNum + "]", ["hiddenPost", postNum])
+        node.before(stub)
+        node.style.display = "none"        
+        e.preventDefault();     
+        e.stopPropagation(); 
+      }
+    }
+  }
+  
+  function hideThisPost(node) {
+    let hasId = node.getElementsByClassName("labelId")[0]
+    let id = hasId ? hasId.innerText.slice(0,6) : ""
+    let postNum = node.getElementsByClassName("linkQuote")[0].innerText
+    let postHidden = false;
+    if (localStorage.getItem("hidden_user_"+boardUri+id)) {
+      let stub = createPostStub("[Show hidden user " + id + "]", ["hiddenUser", id])
+      node.before(stub)
+      node.style.display = "none"
+      postHidden = true;
+    } else if (localStorage.getItem("hidden_post_"+boardUri+node.getElementsByClassName("linkQuote")[0].innerText)) {
+      let stub = createPostStub("[Show hidden post " + postNum + "]", ["hiddenPost", postNum])
+      node.before(stub)
+      node.style.display = "none"
+      postHidden = true;
+    }
+    return postHidden;
   }
   
   function replaceLinkQuoting(nodes) {
@@ -694,11 +767,12 @@ function readyFn() {
             insertBreak(node.getElementsByClassName("divMessage"))
             setIdTextColor(node.getElementsByClassName("labelId"))
             replaceLinkQuoting(node.getElementsByClassName("linkQuote"))
-            hidePost(node)
             updateLinks(node, "quoteLink")
             updateNewlyCreatedBacklinks(node)
             updateCounters(node)
             updateTime(node)
+            addHideUserPosts(node)
+            hideThisPost(node)
           }
         })
       }
@@ -709,14 +783,6 @@ function readyFn() {
     setLoop(threadList.getElementsByTagName("video"))
     applyHoverImgEvent(threadList.getElementsByClassName("uploadCell"))
     setIdTextColor(threadList.getElementsByClassName("labelId"))
-    if (document.getElementById("divPosts")) {
-      divPosts.childNodes.forEach(hidePost)
-    } else {
-      var eles = document.getElementsByClassName("divPosts")
-      for (var i = 0; i < eles.length; i++) {
-        eles[i].childNodes.forEach(hidePost)
-      }
-    }
     replaceLinkQuoting(threadList.getElementsByClassName("linkQuote"))
     updateLinks(threadList, "panelBacklinks")
     updateLinks(threadList, "quoteLink")
@@ -757,7 +823,23 @@ function readyFn() {
       }
     }
     addCounters()
+    if (document.getElementById("divPosts")) {
+      divPosts.childNodes.forEach(addHideUserPosts)
+      divPosts.childNodes.forEach(hideThisPost)
+    } else {
+      var eles = document.getElementsByClassName("divPosts")
+      for (var i = 0; i < eles.length; i++) {
+        let children = eles[i].childNodes
+        let index = children.length-1;
+        while (index >= 0) {
+          addHideUserPosts(children[index])
+          hideThisPost(children[index])
+          index--;
+        }
+      }
+    }
   }
+  console.log("done")
 }
 window.onload = readyFn
 
@@ -845,6 +927,7 @@ function imageThumbsStyle() {
 }
 
 (function() { //fixes post counter and in turn, also post hiding
+  console.log("setup")
   var orig = document.getElementsByClassName.bind(document);
   document.getElementsByClassName = (function(str) {
       if (str == "labelId") {
@@ -860,7 +943,9 @@ function imageThumbsStyle() {
   } else {
     document.onkeydown = null
   }
+  console.log("done injecting css")
 }).call();
+
 
 
 
