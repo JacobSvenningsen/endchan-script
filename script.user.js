@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.2.10
+// @version       1.2.11
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -12,6 +12,8 @@
 // @updateURL     https://github.com/JacobSvenningsen/endchan-script/raw/master/script.user.js
 // @downloadURL   https://github.com/JacobSvenningsen/endchan-script/raw/master/script.user.js
 // ==/UserScript==
+
+let oldQuotesEventMap = new Map()
 
 function setNodeStyle(ele) {
   ele.style.position = "fixed"
@@ -141,7 +143,7 @@ function qrShortcutsSettingOnclick() {
   }
 }
 
-function settingsElement(applyHoverImgEvent, window) {
+function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
   let oldXHR = window.XMLHttpRequest
   var standardQRreplyCallback
   
@@ -172,6 +174,16 @@ function settingsElement(applyHoverImgEvent, window) {
   
   var settingsScreen = document.createElement("div")
   settingsScreen.id = "settings"
+  
+  function togglePostInlining() {
+    if (localStorage.getItem("postInlining") == "false") {
+      localStorage.setItem("postInlining", true)
+      updateAllLinks(true)
+    } else {
+      localStorage.setItem("postInlining", false)
+      updateAllLinks(false)
+    }
+  }
   
   function hoverImageSettingOnclick() {
     if (localStorage.getItem("hover_enabled") == "false") {
@@ -270,15 +282,15 @@ function settingsElement(applyHoverImgEvent, window) {
     }
   }
   
-  function createSettingOption(text, item, func) {
+  function createSettingOption(text, item, func, defaultCheck) {
     let setting = document.createElement("label")
     let input = document.createElement("input")
     let description = document.createElement("span")
     
     let checked = localStorage.getItem(item)
     if (!checked) {
-      checked = false
-      localStorage.setItem(item, false)
+      checked = defaultCheck
+      localStorage.setItem(item, checked)
     } else if (checked == "false") {
       checked = false
     } else {
@@ -298,23 +310,25 @@ function settingsElement(applyHoverImgEvent, window) {
   }
   
   function createPreferedRefreshTimeOption(text, func) {
-    let setting = createSettingOption(text, "refreshInterval", func)
+    let setting = createSettingOption(text, "refreshInterval", func, false)
     setting.firstElementChild.type = "number"
     setting.firstElementChild.style.width = "80px"
     setting.firstElementChild.min="10" 
     setting.firstElementChild.max="600"
+    if (localStorage.getItem("refreshInterval") === "false") localStorage.setItem("refreshInterval", 20)
     setting.firstElementChild.value=localStorage.getItem("refreshInterval")
     setting.firstElementChild.onchange=null
     setting.firstElementChild.oninput=func
     return setting
   }
   
-  settingsScreen.appendChild(createSettingOption("Quick Reply Shortcuts", "qrshortcuts", qrShortcutsSettingOnclick))
-  settingsScreen.appendChild(createSettingOption("Image Hover", "hover_enabled", hoverImageSettingOnclick))
-  settingsScreen.appendChild(createSettingOption("Small Thumbnails", "smallThumbs_enabled", smallThumbsSettingOnclick))
+  settingsScreen.appendChild(createSettingOption("Post Inlining", "postInlining", togglePostInlining, true))
+  settingsScreen.appendChild(createSettingOption("Quick Reply Shortcuts", "qrshortcuts", qrShortcutsSettingOnclick, false))
+  settingsScreen.appendChild(createSettingOption("Image Hover", "hover_enabled", hoverImageSettingOnclick, true))
+  settingsScreen.appendChild(createSettingOption("Small Thumbnails", "smallThumbs_enabled", smallThumbsSettingOnclick, false))
   settingsScreen.appendChild(createPreferedRefreshTimeOption("Prefered Autorefresh Interval", changeRefreshInterval))
-  settingsScreen.appendChild(createSettingOption("Retry refreshing despite getting return code 404", "force_refresh", toggleForceReattemptRefresh))
-  settingsScreen.appendChild(createSettingOption("Clear spoiler after post submission", "clear_spoiler", clearSpoilerFunc))
+  settingsScreen.appendChild(createSettingOption("Retry refreshing despite getting return code 404", "force_refresh", toggleForceReattemptRefresh, false))
+  settingsScreen.appendChild(createSettingOption("Clear spoiler after post submission", "clear_spoiler", clearSpoilerFunc, false))
   toggleForceReattemptRefresh()
   toggleForceReattemptRefresh()
   clearSpoilerFunc()
@@ -389,7 +403,7 @@ function readyFn() {
   if(typeof refreshTimer !== "undefined") {
     window.limitRefreshWait = parseInt(localStorage.getItem("refreshInterval"))
   }
-  document.body.firstElementChild.appendChild(settingsElement(applyHoverImgEvent, window))
+  document.body.firstElementChild.appendChild(settingsElement(applyHoverImgEvent, window, updateAllLinks))
   namefield(window)
 
   function setLoop(posts) {
@@ -614,8 +628,8 @@ function readyFn() {
               }
               clonedNode.firstElementChild.style.borderWidth = "medium"
               clonedNode.firstElementChild.style.borderStyle = "solid"
-              updateLinks(clonedNode, "quoteLink", true)
-              updateLinks(clonedNode, "panelBacklinks", true)
+              updateLinks(clonedNode, "quoteLink", true, false)
+              updateLinks(clonedNode, "panelBacklinks", true, false)
               replaceLinkQuoting(clonedNode.getElementsByClassName("linkQuote"))
               applyHoverImgEvent(clonedNode.getElementsByClassName("uploadCell"))
               setLoop(clonedNode.getElementsByTagName("video"))
@@ -647,49 +661,86 @@ function readyFn() {
     node.style.top = (e.clientY + appendedNode.clientHeight > window.innerHeight - 10) ? window.innerHeight - appendedNode.clientHeight - 10 + 'px' : e.clientY + 'px'
   }
   
-  function updateLinks(parent, linkStr, updateEvents) {
+  function updateLinks(parent, linkStr, updateEvents, updateMap) {
     var links = parent.getElementsByClassName(linkStr)
     if (linkStr == "quoteLink") {
       for (var i = 0; i < links.length; i++) {
         let d = document.getElementById(links[i].innerText.slice(2).split(" ")[0])
-        if (d && !d.classList.contains("opCell")) {
-          links[i].onmouseenter = embeddedLinkHover 
-          links[i].onmouseout = function() { var node = document.getElementById("appendedNode"); if(node) {node.remove()} }
-          insertInlinePost(links[i])
-        } else {
-          links[i].innerText += " (cross-thread)"
+        if (updateMap && !oldQuotesEventMap.has(links[i])) {
+          oldQuotesEventMap.set(links[i], [links[i].onmouseenter, links[i].onmouseout, links[i].href])
+        }
+        if (updateEvents) {
+          if (d && !d.classList.contains("opCell")) {
+            links[i].onmouseenter = embeddedLinkHover 
+            links[i].onmouseout = function() { var node = document.getElementById("appendedNode"); if(node) {node.remove()} }
+            insertInlinePost(links[i])
+          } else if (!links[i].innerText.endsWith("(cross-thread)")) {
+            links[i].innerText += " (cross-thread)"
+          }
         }
       }
     } else {
       for (var i = 0; i < links.length; i++) {
         links[i].childNodes.forEach(function(quote) {
-          if (quote.tagName == "A" && document.getElementById(quote.innerText.slice(2).split(" ")[0])) {
-            quote.onmouseenter = embeddedLinkHover
-            quote.onmouseout = function() { var node = document.getElementById("appendedNode"); if(node) {node.remove()} }
-            insertInlinePost(quote);
+          if (quote.tagName == "A") {
+            if (updateMap && !oldQuotesEventMap.has(quote)) {
+              oldQuotesEventMap.set(quote, [quote.onmouseenter, quote.onmouseout, quote.href])
+            }
+            if (updateEvents && document.getElementById(quote.innerText.slice(2).split(" ")[0])) {
+              quote.onmouseenter = embeddedLinkHover
+              quote.onmouseout = function() { var node = document.getElementById("appendedNode"); if(node) {node.remove()} }
+              insertInlinePost(quote);
+            }
           }
         })
       }
     }
   }
   
-  function updateNewlyCreatedBacklinks(node) {
+  function updateAllLinks(inliningEnabled) {
+    if (inliningEnabled) {
+      if (document.getElementById("threadList")) {
+        updateLinks(threadList, "panelBacklinks", true, false)
+        updateLinks(threadList, "quoteLink", true, false)
+      }
+    } else {
+      oldQuotesEventMap.forEach(function(value, key) {
+        key.onmouseenter = value[0]
+        key.onmouseout = value[1]
+        key.onclick = null
+        key.href = value[2]
+        if (key.innerText.endsWith("(cross-thread)")) {
+          key.innerText = key.innerText.slice(0, key.innerText.length-15)
+        }
+      })
+    }
+  }
+  
+  function updateNewlyCreatedBacklinks(node, updateLink) {
     var quotes = node.getElementsByClassName("quoteLink")
     for (var i = 0; i < quotes.length; i++) {
       var ele = document.getElementById(quotes[i].innerText.slice(2).split(" ")[0])
       if (ele) {
         var backlinks = ele.getElementsByClassName("panelBacklinks")
         for (var j = 0; j < backlinks.length; j++) {
-          backlinks[j].childNodes.forEach(insertInlinePost)
-          backlinks[j].childNodes.forEach(function(link) {
-            link.onmouseenter = embeddedLinkHover
-            link.onmouseout = function() { var node = document.getElementById("appendedNode"); if(node) {node.remove()} }
-          })
+          if (!oldQuotesEventMap.has(backlinks[j])) {
+            oldQuotesEventMap.set(backlinks[j], [backlinks[j].onmouseenter, backlinks[j].onmouseout, backlinks[j].href])
+          }
+          if (updateLink) {
+            backlinks[j].childNodes.forEach(insertInlinePost)
+            backlinks[j].childNodes.forEach(function(link) {
+              link.onmouseenter = embeddedLinkHover
+              link.onmouseout = function() { var node = document.getElementById("appendedNode"); if(node) {node.remove()} }
+            })
+          }
         }
       } else {
+        if (!oldQuotesEventMap.has(quotes[i])) {
+          oldQuotesEventMap.set(quotes[i], [quotes[i].onmouseenter, quotes[i].onmouseout, quotes[i].href])
+        }
         quotes[i].innerText = quotes[i].innerText.endsWith("thread)") ? quotes[i].innerText : quotes[i].innerText+" (cross-thread)"
       }
-    }
+    }  
   }
   
   function addCounters() {
@@ -767,8 +818,8 @@ function readyFn() {
             insertBreak(node.getElementsByClassName("divMessage"))
             setIdTextColor(node.getElementsByClassName("labelId"))
             replaceLinkQuoting(node.getElementsByClassName("linkQuote"))
-            updateLinks(node, "quoteLink")
-            updateNewlyCreatedBacklinks(node)
+            updateLinks(node, "quoteLink", localStorage.getItem("postInlining") == "true", true)
+            updateNewlyCreatedBacklinks(node, localStorage.getItem("postInlining") == "true")
             updateCounters(node)
             updateTime(node)
             addHideUserPosts(node)
@@ -784,8 +835,8 @@ function readyFn() {
     applyHoverImgEvent(threadList.getElementsByClassName("uploadCell"))
     setIdTextColor(threadList.getElementsByClassName("labelId"))
     replaceLinkQuoting(threadList.getElementsByClassName("linkQuote"))
-    updateLinks(threadList, "panelBacklinks")
-    updateLinks(threadList, "quoteLink")
+    updateLinks(threadList, "panelBacklinks", localStorage.getItem("postInlining") == "true", true)
+    updateLinks(threadList, "quoteLink", localStorage.getItem("postInlining") == "true", true)
     observer = new MutationObserver(updateNewPosts)
     observer.observe(threadList.getElementsByClassName("divPosts")[0], {childList:true}) // element to observe for changes, and conf
     if(typeof refreshTimer !== "undefined" && currentRefresh > parseInt(localStorage.getItem("refreshInterval"))) {
@@ -945,12 +996,4 @@ function imageThumbsStyle() {
   }
   console.log("done injecting css")
 }).call();
-
-
-
-
-
-
-
-
 
