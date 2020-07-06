@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.2.11
+// @version       1.2.12
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -233,7 +233,7 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
       this.value = this.min
     }
     localStorage.setItem("refreshInterval", this.value)
-    limitRefreshWait = parseInt(this.value)
+    window.limitRefreshWait = parseInt(this.value)
   }
   
   function toggleForceReattemptRefresh() {
