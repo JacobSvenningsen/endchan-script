@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.2.14
+// @version       1.2.15
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -939,7 +939,14 @@ function insertAtCaret(open, close) {
 function KeyPress(e) { //Adds quick shortcuts for markup and posting
   var evtobj = window.event? event : e
 
-  if (evtobj.ctrlKey) {
+  if (evtobj.keyCode == 27) { //Esc
+    if (evtobj.target.id.startsWith("qr")) {
+      document.getElementById("quick-reply").getElementsByClassName("close-btn")[0].click()
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+  else if (evtobj.ctrlKey) {
     if (evtobj.shiftKey && evtobj.keyCode == 70) { //code shift+F
         insertAtCaret("[code]","[/code]");
         e.preventDefault();     
@@ -1023,6 +1030,7 @@ function imageThumbsStyle() {
   }
   console.log("done injecting css")
 }).call();
+
 
 
 
