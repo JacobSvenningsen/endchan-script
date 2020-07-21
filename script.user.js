@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.2.15
+// @version       1.2.16
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -779,6 +779,7 @@ function readyFn() {
     parent.style.height = "inherit"
     parent.style.display = "inline"
     parent.style.right = "0px"
+    parent.style.zIndex = "-1"
     
     postCounter.innerText = threadList.getElementsByClassName("postCell").length
     imgCounter.innerText = threadList.getElementsByClassName("uploadCell").length
