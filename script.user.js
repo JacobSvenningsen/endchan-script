@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.2.12
+// @version       1.2.13
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -808,6 +808,14 @@ function readyFn() {
     window.updateTimeNode(node.getElementsByClassName("labelCreated")[0], useLocaltime.checked)
   }
   
+  function moveMultipleUploadFromPost(post, isOP) {
+    if (post.classList.contains("multipleUploads")) {
+      post.classList.remove("multipleUploads")
+      let addTo = isOP ? post.getElementsByClassName("innerOP")[0] : post.getElementsByClassName("innerPost")[0]
+      addTo.classList.add("multipleUploads")
+    }
+  }
+  
   const updateNewPosts = function(list, observer) {
     for(let mutation of list) {
       if (mutation.type === 'childList') {
@@ -823,6 +831,7 @@ function readyFn() {
             updateCounters(node)
             updateTime(node)
             addHideUserPosts(node)
+            //moveMultipleUploadFromPost(node, false)
             hideThisPost(node)
           }
         })
@@ -830,6 +839,21 @@ function readyFn() {
     }
   }
 
+
+  
+  function moveMultipleUploadsClassInit(threads) {
+    opCells = threads.childNodes
+    for (let i = 0; i < opCells.length; ++i) {
+      if (opCells[i].tagName === "DIV") {
+        moveMultipleUploadFromPost(opCells[i], true)
+        /*let posts = opCells[i].getElementsByClassName("postCell")
+        for (let j = 0; j < posts.length; ++j) {
+          moveMultipleUploadFromPost(posts[j], false)
+        }*/
+      }
+    }
+  }
+  
   if (document.getElementById("threadList")) {
     setLoop(threadList.getElementsByTagName("video"))
     applyHoverImgEvent(threadList.getElementsByClassName("uploadCell"))
@@ -837,6 +861,7 @@ function readyFn() {
     replaceLinkQuoting(threadList.getElementsByClassName("linkQuote"))
     updateLinks(threadList, "panelBacklinks", localStorage.getItem("postInlining") == "true", true)
     updateLinks(threadList, "quoteLink", localStorage.getItem("postInlining") == "true", true)
+    moveMultipleUploadsClassInit(document.getElementById("divThreads"))
     observer = new MutationObserver(updateNewPosts)
     observer.observe(threadList.getElementsByClassName("divPosts")[0], {childList:true}) // element to observe for changes, and conf
     if(typeof refreshTimer !== "undefined" && currentRefresh > parseInt(localStorage.getItem("refreshInterval"))) {
@@ -996,4 +1021,5 @@ function imageThumbsStyle() {
   }
   console.log("done injecting css")
 }).call();
+
 
