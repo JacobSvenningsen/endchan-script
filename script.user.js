@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.2.13
+// @version       1.2.14
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -361,6 +361,7 @@ function namefield(window) {
     fieldName.value = localStorage.getItem("namefield");
     if (window.show_quick_reply) {
       window.show_quick_reply()
+      document.getElementById("quick-reply").getElementsByClassName("close-btn")[0].onclick = function() {document.getElementById("quick-reply").style.display = "none"}
       qrname.value = fieldName.value
       qrname.oninput = function() {
         localStorage.setItem("namefield", qrname.value)
@@ -547,6 +548,7 @@ function readyFn() {
           if (!document.getElementById("qrbody") && window.show_quick_reply) {
             window.show_quick_reply()
           }
+          if (document.getElementById("quick-reply").style.display == "none") document.getElementById("quick-reply").style.display = "block"
           if (document.getElementById("qrbody")) {
             let selection = window.getSelection().toString()
             // where we paste in quote and marked text. 3 indicates the quote sign ">>" and '\n'
@@ -1021,5 +1023,6 @@ function imageThumbsStyle() {
   }
   console.log("done injecting css")
 }).call();
+
 
 
