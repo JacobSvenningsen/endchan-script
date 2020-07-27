@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.2.16
+// @version       1.3.0
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -14,6 +14,65 @@
 // ==/UserScript==
 
 let oldQuotesEventMap = new Map()
+let qrSettings = {}
+let keyPressMap = new Map()
+
+function insertAtCaret(open, close) {
+  var startPos = qrbody.selectionStart;
+  var endPos = qrbody.selectionEnd;
+  var scrollTop = qrbody.scrollTop;
+  var marked_text = "";
+  for (var i = qrbody.selectionStart; i < qrbody.selectionEnd; i++) {
+    marked_text += qrbody.value[i]
+  }
+  qrbody.value = qrbody.value.substring(0, startPos) + open + marked_text + close + qrbody.value.substring(endPos, qrbody.value.length);
+  qrbody.focus();
+  qrbody.selectionStart = startPos + open.length;
+  qrbody.selectionEnd = startPos + open.length + marked_text.length;
+  qrbody.scrollTop = scrollTop;
+};
+
+function KeyPress(e) { //Adds quick shortcuts for markup and posting
+  var evtobj = window.event? event : e
+  let shortcut = keyPressMap.get(evtobj.key.toUpperCase())
+  if (shortcut) {
+    if (shortcut[0] == evtobj.ctrlKey && shortcut[1] == evtobj.altKey && shortcut[2] == evtobj.shiftKey) {
+      switch (shortcut[3]) {
+        case 1: //bold
+          insertAtCaret("'''","'''");
+          break;
+        case 2: //italics
+          insertAtCaret("''","''");
+          break;
+        case 3: //underline
+          insertAtCaret("__","__");
+          break;
+        case 4: //spoiler
+          insertAtCaret("**","**");
+          break;
+        case 5: //submit
+          document.getElementById("qrbutton").click();
+          break;
+        case 6: //strikethrough
+          insertAtCaret("~~","~~");
+          break;
+        case 7: //header
+          insertAtCaret("==","==");
+          break;
+        case 8: //codetag
+          insertAtCaret("[code]","[/code]");
+          break;
+        case 9: //close quick-reply
+          document.getElementById("quick-reply").getElementsByClassName("close-btn")[0].click();
+          break;
+        default: //shouldn't get here ever
+          break;
+      }
+      e.preventDefault();     
+      e.stopPropagation();
+    }
+  }
+}
 
 function setNodeStyle(ele) {
   ele.style.position = "fixed"
@@ -100,7 +159,8 @@ function styleForSettingsWindow() {
   style.id = "settings_screen_style"
   style.type = "text/css"
   style.innerText = 
-    '#settingsWindow.opened { \
+    '#settingsWindow.opened, \
+     #qrSettingsScreen.opened{ \
       display:block !important; \
       position:fixed; \
       top: 50%; \
@@ -113,15 +173,19 @@ function styleForSettingsWindow() {
       z-index: 101; \
     } \
     \
+    #qrSettingsScreen.opened { \
+      height:unset !important; \
+      z-index: 102;\
+    }\
     #settingsWindow.opened h1 { \
         text-align:center; \
     } \
     \
-    #settingsWindow.opened .settings { \
+    #settingsWindow.opened .settings, #qrSettingsScreen.opened .settings { \
         width:90%; \
     } \
     \
-    #settingsOverlay { \
+    #settingsOverlay, #qrSettingsScreenOverlay { \
         position:fixed; \
         top:0px; \
         left:0px; \
@@ -129,17 +193,32 @@ function styleForSettingsWindow() {
         height:100%; \
         background-color: rgba(0,0,0,0.4); \
         z-index:100; \
+    } \
+    \
+    #qrSettingsScreenOverlay { \
+      background-color: rgba(0,0,0,0); \
+    }\
+    \
+    .setting { \
+      overflow:hidden;\
+    } \
+    \
+    .shortcut { \
+      float:right; \
+      margin-bottom:1em; \
+      width:10em; \
     }'
   return style
 }
 
 function qrShortcutsSettingOnclick() {
-  if (localStorage.getItem("qrshortcuts") == "false") {
-    document.onkeydown = KeyPress
-    localStorage.setItem("qrshortcuts", true)
-  } else {
-    document.onkeydown = null
-    localStorage.setItem("qrshortcuts", false)
+  let qbody = document.getElementById("qrbody")
+  if (qbody) {
+    if (!qrSettings.enabled) qbody.onkeydown = KeyPress;
+    else qbody.onkeydown = null;
+    if (!qrSettings.enabled) qrSettingsButton.style.display = "block"; else qrSettingsButton.style.display = "none";
+    qrSettings.enabled = !qrSettings.enabled;
+    localStorage.setItem("qrshortcuts", JSON.stringify(qrSettings));
   }
 }
 
@@ -289,12 +368,20 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
     
     let checked = localStorage.getItem(item)
     if (!checked) {
-      checked = defaultCheck
-      localStorage.setItem(item, checked)
+      checked = typeof(defaultCheck) === "boolean" ? defaultCheck : defaultCheck.enabled
+      localStorage.setItem(item, JSON.stringify(defaultCheck))
     } else if (checked == "false") {
       checked = false
-    } else {
+      if (item === "qrshortcuts") {
+        defaultCheck.enabled = false
+        localStorage.setItem(item, JSON.stringify(defaultCheck))
+      }
+    } else if (checked == "true") {
       checked = true
+      defaultCheck.enabled = true
+      if (item === "qrshortcuts") localStorage.setItem(item, JSON.stringify(defaultCheck))
+    } else {
+      checked = JSON.parse(checked).enabled      
     }
     input.type = "checkbox"
     input.checked = checked
@@ -307,6 +394,89 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
     setting.appendChild(description)
     setting.classList.add("setting")
     return setting
+  }
+  
+  function createQRShortcutsSettingsScreen(qrsettingItem, box) {
+    function createQrSettingItem(key, value) {
+      let setting = document.createElement("label")
+      let input = document.createElement("input")
+      let description = document.createElement("span")
+      let shortcut = document.createElement("input")
+      
+      input.type = "checkbox"
+      input.checked = value.enabled
+      input.onchange = function() {
+        qrSettings.options[key].enabled = this.checked
+        localStorage.setItem("qrshortcuts", JSON.stringify(qrSettings))
+        if (qrSettings.options[key].enabled) keyPressMap.set(qrSettings.options[key].keyCode, [qrSettings.options[key].ctrl, qrSettings.options[key].alt, qrSettings.options[key].shift, qrSettings.options[key].index]);
+        else keyPressMap.delete(qrSettings.options[key].keyCode);
+      }
+      input.style.marginRight = "4px"
+      input.style.marginLeft = "4px"
+      description.innerText = key + " shortcut"
+      
+      shortcut.type = "text"
+      shortcut.classList.add("shortcut")
+      let val = (value.ctrl ? "ctrl+" : "") + (value.alt ? "alt+" : "") + (value.shift ? "shift+" : "") + value.keyCode
+      shortcut.value = val
+      shortcut.onkeydown = function(e) {
+        if (e.keyCode > 18 || e.keyCode < 16) { //Don't include modifier keys (ctrl, alt, shift)
+          keyPressMap.delete(qrSettings.options[key].keyCode);
+          qrSettings.options[key] = 
+            { "enabled": qrSettings.options[key].enabled
+            , "ctrl": e.ctrlKey
+            , "alt": e.altKey
+            , "shift": e.shiftKey
+            , "keyCode": e.key.toUpperCase()
+            , "index": qrSettings.options[key].index
+            }
+          localStorage.setItem("qrshortcuts", JSON.stringify(qrSettings));
+          let v = qrSettings.options[key];
+          this.value = (v.ctrl ? "ctrl+" : "") + (v.alt ? "alt+" : "") + (v.shift ? "shift+" : "") + v.keyCode;
+          if(v.enabled) keyPressMap.set(v.keyCode, [v.ctrl, v.alt, v.shift, v.index]);
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }
+      shortcut.style.marginRight = "1em";
+      
+      //update keyPressMap
+      if (value.enabled) keyPressMap.set(value.keyCode, [value.ctrl, value.alt, value.shift, value.index])
+      setting.appendChild(input)
+      setting.appendChild(description)
+      setting.appendChild(shortcut)
+      setting.classList.add("setting")
+      return setting
+    }
+    
+    let b = document.createElement("button")
+    b.type = "button"
+    b.id = "qrSettingsButton"
+    b.onclick = function() {document.getElementById("qrSettingsScreen").classList.toggle("opened"); qrSettingsScreenOverlay.style.display = "block";}
+    b.innerText = "Shortcuts"
+    b.style.marginRight = "12pt"
+    b.style.float = "right"
+    
+    let qss = document.createElement("div")
+    qss.id = "qrSettingsScreen"
+    qss.style.display = "none"
+    
+    qrSettings = JSON.parse(localStorage.getItem("qrshortcuts"))
+    if (qrSettings.enabled) b.style.display = "block"; else b.style.display = "none";
+    
+    qss.append(createQrSettingItem("bold", qrSettings.options.bold))
+    qss.append(createQrSettingItem("italics", qrSettings.options.italics))
+    qss.append(createQrSettingItem("underline", qrSettings.options.underline))
+    qss.append(createQrSettingItem("spoiler", qrSettings.options.spoiler))
+    qss.append(createQrSettingItem("submit", qrSettings.options.submit))
+    qss.append(createQrSettingItem("strikethrough", qrSettings.options.strikethrough))
+    qss.append(createQrSettingItem("header", qrSettings.options.header))
+    qss.append(createQrSettingItem("codetag", qrSettings.options.codetag))
+    qss.append(createQrSettingItem("closeQr", qrSettings.options.closeQr))
+    qss.style.backgroundColor = settingsBox.style.backgroundColor
+    
+    box.appendChild(qss)
+    qrsettingItem.append(b)
   }
   
   function createPreferedRefreshTimeOption(text, func) {
@@ -322,8 +492,28 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
     return setting
   }
   
+  
+  function defaultQrSettings() {
+    function getSetting(ctrl, shift, code, index) {return {"enabled": true, "ctrl": ctrl, "alt": false, "shift": shift, "keyCode": code, "index": index}}
+    let settings = 
+      { "enabled": false
+      , "options": 
+        { "bold": getSetting(true, false, "B", 1)
+        , "italics": getSetting(true, false, "I", 2)
+        , "underline": getSetting(true, true, "U", 3)
+        , "spoiler": getSetting(true, false, "S", 4)
+        , "submit": getSetting(true, false, "ENTER", 5)
+        , "strikethrough": getSetting(true, "false", "D", 6)
+        , "header": getSetting(true, false, "R", 7)
+        , "codetag": getSetting(true, true, "F", 8)
+        , "closeQr": getSetting(false, false, "ESCAPE", 9)
+        }
+      }
+    return settings
+  }
+  
   settingsScreen.appendChild(createSettingOption("Post Inlining", "postInlining", togglePostInlining, true))
-  settingsScreen.appendChild(createSettingOption("Quick Reply Shortcuts", "qrshortcuts", qrShortcutsSettingOnclick, false))
+  settingsScreen.appendChild(createSettingOption("Quick Reply Shortcuts", "qrshortcuts", qrShortcutsSettingOnclick, defaultQrSettings()))
   settingsScreen.appendChild(createSettingOption("Image Hover", "hover_enabled", hoverImageSettingOnclick, true))
   settingsScreen.appendChild(createSettingOption("Small Thumbnails", "smallThumbs_enabled", smallThumbsSettingOnclick, false))
   settingsScreen.appendChild(createPreferedRefreshTimeOption("Prefered Autorefresh Interval", changeRefreshInterval))
@@ -334,7 +524,9 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
   clearSpoilerFunc()
   clearSpoilerFunc()
 
+  
   settingsBox.appendChild(settingsScreen)
+  createQRShortcutsSettingsScreen(settingsScreen.children[1], settingsBox)
   settingsBox.style.display = "none"
   settingsBox.style.zIndex = "100"
   document.body.after(settingsBox)
@@ -345,13 +537,19 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
   overlay.onclick = function() {this.style.display = "none"; settingsWindow.classList.toggle("opened")}
   
   settingsWindow.before(overlay)
+  let qoverlay = document.createElement("div")
+  qoverlay.id = "qrSettingsScreenOverlay"
+  qoverlay.style.display = "none"
+  qoverlay.onclick = function() {this.style.display = "none"; qrSettingsScreen.classList.toggle("opened")}
   
+  settingsWindow.before(qoverlay)
   ele.onmousedown = function(e) {
     settingsBox.classList.toggle("opened")
     settingsOverlay.style.display = "block"
     e.preventDefault()
     e.stopPropagation()
   }
+  
   
   return ele
 }
@@ -900,6 +1098,7 @@ function readyFn() {
         }
         QRpostReply()
       }
+      if (qrSettings.enabled) qrbody.onkeydown = KeyPress
     }
     addCounters()
     if (document.getElementById("divPosts")) {
@@ -921,80 +1120,6 @@ function readyFn() {
   console.log("done")
 }
 window.onload = readyFn
-
-function insertAtCaret(open, close) {
-  var startPos = qrbody.selectionStart;
-  var endPos = qrbody.selectionEnd;
-  var scrollTop = qrbody.scrollTop;
-  var marked_text = "";
-  for (var i = qrbody.selectionStart; i < qrbody.selectionEnd; i++) {
-    marked_text += qrbody.value[i]
-  }
-  qrbody.value = qrbody.value.substring(0, startPos) + open + marked_text + close + qrbody.value.substring(endPos, qrbody.value.length);
-  qrbody.focus();
-  qrbody.selectionStart = startPos + open.length;
-  qrbody.selectionEnd = startPos + open.length + marked_text.length;
-  qrbody.scrollTop = scrollTop;
-};
-
-function KeyPress(e) { //Adds quick shortcuts for markup and posting
-  var evtobj = window.event? event : e
-
-  if (evtobj.keyCode == 27) { //Esc
-    if (evtobj.target.id.startsWith("qr")) {
-      document.getElementById("quick-reply").getElementsByClassName("close-btn")[0].click()
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  }
-  else if (evtobj.ctrlKey) {
-    if (evtobj.shiftKey && evtobj.keyCode == 70) { //code shift+F
-        insertAtCaret("[code]","[/code]");
-        e.preventDefault();     
-        e.stopPropagation(); 
-    } else {
-      switch(evtobj.keyCode) {
-        case 13: //submit ENTER
-          document.getElementById("qrbutton").click();
-          break;
-        case 83: //spoiler S
-          insertAtCaret("**","**");
-          e.preventDefault();     
-          e.stopPropagation();
-          break;
-        case 73: //italics I
-          insertAtCaret("''","''");
-          e.preventDefault();     
-          e.stopPropagation();
-          break;
-        case 66: //bold B
-          insertAtCaret("'''","'''");
-          e.preventDefault();     
-          e.stopPropagation();
-          break;
-        case 85: //underline U
-          if (!evtobj.shiftKey) {
-            insertAtCaret("__","__");
-            e.preventDefault();     
-            e.stopPropagation();
-          }
-          break;
-        case 68: //strikethrough D
-          insertAtCaret("~~","~~");
-          e.preventDefault();     
-          e.stopPropagation();
-          break;
-        case 82: //big letters R
-          insertAtCaret("==","==");
-          e.preventDefault();     
-          e.stopPropagation();
-          break;
-        default:
-          break;
-      }
-    }
-  }
-}
 
 function imageThumbsStyle() {
   let style = document.createElement("style")
@@ -1024,13 +1149,9 @@ function imageThumbsStyle() {
   });
   document.firstElementChild.appendChild(styleForSettingsWindow())
   document.firstElementChild.appendChild(imageThumbsStyle())
-  if (localStorage.getItem("qrshortcuts") == "true") {
-    document.onkeydown = KeyPress
-  } else {
-    document.onkeydown = null
-  }
   console.log("done injecting css")
 }).call();
+
 
 
 
