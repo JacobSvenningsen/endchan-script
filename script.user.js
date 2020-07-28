@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.3.2
+// @version       1.3.3
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -65,6 +65,46 @@ function KeyPress(e) { //Adds quick shortcuts for markup and posting
       case 9: //close quick-reply
         document.getElementById("quick-reply").getElementsByClassName("close-btn")[0].click();
         break;
+      case 10: //Japanese letters
+        insertAtCaret("[aa]","[/aa]");
+        break;
+      case 11: //White
+        insertAtCaret("~","/~");
+        break;
+      case 12: //Pink
+        insertAtCaret("!","/!");
+        break;
+      case 13: //Red
+        insertAtCaret("@","/@");
+        break;
+      case 14: //Orange
+        insertAtCaret("&","/&");
+        break;
+      case 15: //Yellow
+        insertAtCaret("+","/+");
+        break;
+      case 16: //Green
+        insertAtCaret("$","/$");
+        break;
+      case 17: //Cyan
+        insertAtCaret("?","/?");
+        break;
+      case 18: //Blue
+        insertAtCaret("#","/#");
+        break;
+      case 19: //Purple
+        insertAtCaret("%","/%");
+        break;
+      case 20: //Brown
+        insertAtCaret("^","/^");
+        break;
+      case 21: //Meme
+        insertAtCaret("[meme]","[/meme]");
+        break;
+      case 22: //Autism
+        insertAtCaret("[autism]","[/autism]");
+        break;
+        
       default: //shouldn't get here ever
         break;
     }
@@ -158,50 +198,56 @@ function styleForSettingsWindow() {
   style.id = "settings_screen_style"
   style.type = "text/css"
   style.innerText = 
-    '#settingsWindow.opened, \
-     #qrSettingsScreen.opened{ \
-      display:block !important; \
-      position:fixed; \
+    '#settingsWindow, #qrSettingsScreen { \
+      display:none; \
+    } \
+     \
+    #settingsWindow.opened h1 { \
+      text-align:center; \
+    } \
+     \
+    #settingsWindow.opened, #qrSettingsScreen.opened { \
+      display:block; \
+      position: fixed; \
       top: 50%; \
       left: 50%; \
-      width:30em; \
-      height:18em; \
-      margin-top: -9em; \
-      margin-left: -15em; \
-      border: solid 1px; \
+      margin-right: -50%; \
+      transform: translate(-50%, -50%); \
       z-index: 101; \
+      max-height:60%; \
+      padding:0em 1em 1em 1em; \
+      overflow-y: scroll; \
+      width:30em; \
     } \
-    \
+     \
     #qrSettingsScreen.opened { \
-      height:unset !important; \
-      z-index: 102;\
-    }\
-    #settingsWindow.opened h1 { \
-        text-align:center; \
+      padding-top:1em; \
+      z-index: 102; \
     } \
-    \
-    #settingsWindow.opened .settings, #qrSettingsScreen.opened .settings { \
-        width:90%; \
-    } \
-    \
+     \
     #settingsOverlay, #qrSettingsScreenOverlay { \
-        position:fixed; \
-        top:0px; \
-        left:0px; \
-        width:100%; \
-        height:100%; \
-        background-color: rgba(0,0,0,0.4); \
-        z-index:100; \
+      display:none; \
     } \
-    \
-    #qrSettingsScreenOverlay { \
+     \
+    #settingsOverlay.opened, \
+    #qrSettingsScreenOverlay.opened { \
+      display:block; \
+      position:fixed; \
+      top:0px; \
+      left:0px; \
+      width:100%; \
+      height:100%; \
+      background-color: rgba(0,0,0,0.4); \
+      z-index:100; \
+    } \
+     \
+    #qrSettingsScreenOverlay.opened { \
       background-color: rgba(0,0,0,0); \
-    }\
-    \
-    .setting { \
-      overflow:hidden;\
     } \
-    \
+     \
+    .setting { \
+      overflow:hidden; \
+    } \
     .shortcut { \
       float:right; \
       margin-bottom:1em; \
@@ -395,7 +441,7 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
     return setting
   }
   
-  function createQRShortcutsSettingsScreen(qrsettingItem, box) {
+  function createQRShortcutsSettingsScreen(qrsettingItem, defaultQrSettings) {
     function createQrSettingItem(key, value) {
       let setting = document.createElement("label")
       let input = document.createElement("input")
@@ -474,31 +520,33 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
     let b = document.createElement("button")
     b.type = "button"
     b.id = "qrSettingsButton"
-    b.onclick = function() {document.getElementById("qrSettingsScreen").classList.toggle("opened"); qrSettingsScreenOverlay.style.display = "block";}
+    b.onclick = function() {qrSettingsScreen.classList.toggle("opened"); qrSettingsScreenOverlay.classList.toggle("opened")}
     b.innerText = "Shortcuts"
     b.style.marginRight = "12pt"
     b.style.float = "right"
     
     let qss = document.createElement("div")
     qss.id = "qrSettingsScreen"
-    qss.style.display = "none"
     
     qrSettings = JSON.parse(localStorage.getItem("qrshortcuts"))
     if (qrSettings.enabled) b.style.display = "block"; else b.style.display = "none";
     
-    qss.append(createQrSettingItem("bold", qrSettings.options.bold))
-    qss.append(createQrSettingItem("italics", qrSettings.options.italics))
-    qss.append(createQrSettingItem("underline", qrSettings.options.underline))
-    qss.append(createQrSettingItem("spoiler", qrSettings.options.spoiler))
-    qss.append(createQrSettingItem("submit", qrSettings.options.submit))
-    qss.append(createQrSettingItem("strikethrough", qrSettings.options.strikethrough))
-    qss.append(createQrSettingItem("header", qrSettings.options.header))
-    qss.append(createQrSettingItem("codetag", qrSettings.options.codetag))
-    qss.append(createQrSettingItem("closeQr", qrSettings.options.closeQr))
-    qss.style.backgroundColor = settingsBox.style.backgroundColor
+    let keys = Object.keys(qrSettings.options);
+    for (let i = 0; i < keys.length; i++) {
+      qss.append(createQrSettingItem(keys[i], qrSettings.options[keys[i]]))
+    }
+    if(keys[keys.length-1] === "closeQr") {
+      let tempSettings = defaultQrSettings().options;
+      let remainingKeys = Object.keys(tempSettings)
+      for(let i = keys.length; i < remainingKeys.length; i++) {
+        qrSettings.options[remainingKeys[i]] = tempSettings[remainingKeys[i]];
+        qss.append(createQrSettingItem(remainingKeys[i], tempSettings[remainingKeys[i]]));
+      }
+    }
     
-    box.appendChild(qss)
+    qss.style.backgroundColor = settingsBox.style.backgroundColor
     qrsettingItem.append(b)
+    return qss;
   }
   
   function createPreferedRefreshTimeOption(text, func) {
@@ -516,21 +564,35 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
   
   
   function defaultQrSettings() {
-    function getSetting(ctrl, shift, code, index) {return {"enabled": true, "ctrl": ctrl, "alt": false, "shift": shift, "keyCode": code, "index": index}}
+    function getSetting(enabled, ctrl, shift, code, index) {return {"enabled": enabled, "ctrl": ctrl, "alt": false, "shift": shift, "keyCode": code, "index": index}}
     let settings = 
       { "enabled": false
       , "options": 
-        { "bold": getSetting(true, false, "B", 1)
-        , "italics": getSetting(true, false, "I", 2)
-        , "underline": getSetting(true, true, "U", 3)
-        , "spoiler": getSetting(true, false, "S", 4)
-        , "submit": getSetting(true, false, "ENTER", 5)
-        , "strikethrough": getSetting(true, "false", "D", 6)
-        , "header": getSetting(true, false, "R", 7)
-        , "codetag": getSetting(true, true, "F", 8)
-        , "closeQr": getSetting(false, false, "ESCAPE", 9)
+        { "bold": getSetting(true, true, false, "B", 1)
+        , "italics": getSetting(true, true, false, "I", 2)
+        , "underline": getSetting(true, true, true, "U", 3)
+        , "spoiler": getSetting(true, true, false, "S", 4)
+        , "submit": getSetting(true, true, false, "ENTER", 5)
+        , "strikethrough": getSetting(true, true, "false", "D", 6)
+        , "header": getSetting(true, true, false, "R", 7)
+        , "codetag": getSetting(true, true, true, "F", 8)
+        , "closeQr": getSetting(true, false, false, "ESCAPE", 9)
+        , "japanese": getSetting(false, true, true, "A", 10)
+        , "white": getSetting(false, true, false, "1", 11)
+        , "pink": getSetting(false, true, false, "2", 12)
+        , "red": getSetting(false, true, false, "3", 13)
+        , "orange": getSetting(false, true, false, "4", 14)
+        , "yellow": getSetting(false, true, false, "5", 15)
+        , "green": getSetting(false, true, false, "6", 16)
+        , "cyan": getSetting(false, true, false, "7", 17)
+        , "blue": getSetting(false, true, false, "8", 18)
+        , "purple": getSetting(false, true, false, "9", 19)
+        , "brown": getSetting(false, true, false, "0", 20)
+        , "meme": getSetting(false, true, false, "+", 21)
+        , "autism": getSetting(false, true, false, "'", 22)
         }
       }
+    
     return settings
   }
   
@@ -548,26 +610,23 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
 
   
   settingsBox.appendChild(settingsScreen)
-  createQRShortcutsSettingsScreen(settingsScreen.children[1], settingsBox)
-  settingsBox.style.display = "none"
   settingsBox.style.zIndex = "100"
   document.body.after(settingsBox)
+  settingsBox.after(createQRShortcutsSettingsScreen(settingsScreen.children[1], defaultQrSettings))
   
   let overlay = document.createElement("div")
   overlay.id = "settingsOverlay"
-  overlay.style.display = "none"
-  overlay.onclick = function() {this.style.display = "none"; settingsWindow.classList.toggle("opened")}
+  overlay.onclick = function() {settingsWindow.classList.toggle("opened"); settingsOverlay.classList.toggle("opened");}
   
   settingsWindow.before(overlay)
   let qoverlay = document.createElement("div")
   qoverlay.id = "qrSettingsScreenOverlay"
-  qoverlay.style.display = "none"
-  qoverlay.onclick = function() {this.style.display = "none"; qrSettingsScreen.classList.toggle("opened")}
+  qoverlay.onclick = function() {qrSettingsScreen.classList.toggle("opened"); qrSettingsScreenOverlay.classList.toggle("opened");}
   
   settingsWindow.before(qoverlay)
   ele.onmousedown = function(e) {
     settingsBox.classList.toggle("opened")
-    settingsOverlay.style.display = "block"
+    overlay.classList.toggle("opened")
     e.preventDefault()
     e.stopPropagation()
   }
