@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.3.1
+// @version       1.3.2
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -34,43 +34,42 @@ function insertAtCaret(open, close) {
 
 function KeyPress(e) { //Adds quick shortcuts for markup and posting
   var evtobj = window.event? event : e
-  let shortcut = keyPressMap.get(evtobj.key.toUpperCase())
+  let entry = (evtobj.ctrlKey ? "C" : "") + (evtobj.altKey ? "A" : "") + (evtobj.shiftKey ? "S" : "") + evtobj.key.toUpperCase();
+  let shortcut = keyPressMap.get(entry)
   if (shortcut) {
-    if (shortcut[0] == evtobj.ctrlKey && shortcut[1] == evtobj.altKey && shortcut[2] == evtobj.shiftKey) {
-      switch (shortcut[3]) {
-        case 1: //bold
-          insertAtCaret("'''","'''");
-          break;
-        case 2: //italics
-          insertAtCaret("''","''");
-          break;
-        case 3: //underline
-          insertAtCaret("__","__");
-          break;
-        case 4: //spoiler
-          insertAtCaret("**","**");
-          break;
-        case 5: //submit
-          document.getElementById("qrbutton").click();
-          break;
-        case 6: //strikethrough
-          insertAtCaret("~~","~~");
-          break;
-        case 7: //header
-          insertAtCaret("==","==");
-          break;
-        case 8: //codetag
-          insertAtCaret("[code]","[/code]");
-          break;
-        case 9: //close quick-reply
-          document.getElementById("quick-reply").getElementsByClassName("close-btn")[0].click();
-          break;
-        default: //shouldn't get here ever
-          break;
-      }
-      e.preventDefault();     
-      e.stopPropagation();
+    switch (shortcut) {
+      case 1: //bold
+        insertAtCaret("'''","'''");
+        break;
+      case 2: //italics
+        insertAtCaret("''","''");
+        break;
+      case 3: //underline
+        insertAtCaret("__","__");
+        break;
+      case 4: //spoiler
+        insertAtCaret("**","**");
+        break;
+      case 5: //submit
+        document.getElementById("qrbutton").click();
+        break;
+      case 6: //strikethrough
+        insertAtCaret("~~","~~");
+        break;
+      case 7: //header
+        insertAtCaret("==","==");
+        break;
+      case 8: //codetag
+        insertAtCaret("[code]","[/code]");
+        break;
+      case 9: //close quick-reply
+        document.getElementById("quick-reply").getElementsByClassName("close-btn")[0].click();
+        break;
+      default: //shouldn't get here ever
+        break;
     }
+    e.preventDefault();     
+    e.stopPropagation();
   }
 }
 
@@ -406,10 +405,21 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
       input.type = "checkbox"
       input.checked = value.enabled
       input.onchange = function() {
-        qrSettings.options[key].enabled = this.checked
-        localStorage.setItem("qrshortcuts", JSON.stringify(qrSettings))
-        if (qrSettings.options[key].enabled) keyPressMap.set(qrSettings.options[key].keyCode, [qrSettings.options[key].ctrl, qrSettings.options[key].alt, qrSettings.options[key].shift, qrSettings.options[key].index]);
-        else keyPressMap.delete(qrSettings.options[key].keyCode);
+        let option = qrSettings.options[key];
+        let entry = (option.ctrl ? "C" : "") + (option.alt ? "A" : "") + (option.shift ? "S" : "") + option.keyCode;
+        let prevEntry = keyPressMap.get(entry);
+        if (prevEntry && prevEntry !== option.index) {
+          qrSettings.options[key].enabled = false;
+          localStorage.setItem("qrshortcuts", JSON.stringify(qrSettings))
+          this.checked = false;
+        } else {
+          qrSettings.options[key].enabled = this.checked
+          localStorage.setItem("qrshortcuts", JSON.stringify(qrSettings))
+          if (option.enabled) {
+            keyPressMap.set(entry, option.index);
+          }
+          else keyPressMap.delete(entry);
+        }
       }
       input.style.marginRight = "4px"
       input.style.marginLeft = "4px"
@@ -421,19 +431,28 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
       shortcut.value = val
       shortcut.onkeydown = function(e) {
         if (e.keyCode > 18 || e.keyCode < 16) { //Don't include modifier keys (ctrl, alt, shift)
-          keyPressMap.delete(qrSettings.options[key].keyCode);
+          let option = qrSettings.options[key];
+          let entry = (option.ctrl ? "C" : "") + (option.alt ? "A" : "") + (option.shift ? "S" : "") + option.keyCode;
+          if(option.enabled) keyPressMap.delete(entry);
           qrSettings.options[key] = 
-            { "enabled": qrSettings.options[key].enabled
+            { "enabled": option.enabled
             , "ctrl": e.ctrlKey
             , "alt": e.altKey
             , "shift": e.shiftKey
             , "keyCode": e.key.toUpperCase()
-            , "index": qrSettings.options[key].index
+            , "index": option.index
             }
           localStorage.setItem("qrshortcuts", JSON.stringify(qrSettings));
-          let v = qrSettings.options[key];
-          this.value = (v.ctrl ? "ctrl+" : "") + (v.alt ? "alt+" : "") + (v.shift ? "shift+" : "") + v.keyCode;
-          if(v.enabled) keyPressMap.set(v.keyCode, [v.ctrl, v.alt, v.shift, v.index]);
+          option = qrSettings.options[key];
+          entry = (option.ctrl ? "C" : "") + (option.alt ? "A" : "") + (option.shift ? "S" : "") + option.keyCode;
+          this.value = (option.ctrl ? "ctrl+" : "") + (option.alt ? "alt+" : "") + (option.shift ? "shift+" : "") + option.keyCode;
+          if(option.enabled) {
+            let oldkeycode = keyPressMap.get(entry)
+            if (oldkeycode && oldkeycode !== option.index) { //Does another shortcut already exist?
+              qrSettingsScreen.children[oldkeycode-1].firstElementChild.click();
+            }
+            keyPressMap.set(entry, option.index);
+          }
           e.preventDefault();
           e.stopPropagation();
         }
@@ -441,7 +460,10 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
       shortcut.style.marginRight = "1em";
       
       //update keyPressMap
-      if (value.enabled) keyPressMap.set(value.keyCode, [value.ctrl, value.alt, value.shift, value.index])
+      if (value.enabled) {
+        let entry = (value.ctrl ? "C" : "") + (value.alt ? "A" : "") + (value.shift ? "S" : "") + value.keyCode;
+        keyPressMap.set(entry, value.index);
+      }
       setting.appendChild(input)
       setting.appendChild(description)
       setting.appendChild(shortcut)
@@ -1153,6 +1175,7 @@ function imageThumbsStyle() {
   document.firstElementChild.appendChild(imageThumbsStyle())
   console.log("done injecting css")
 }).call();
+
 
 
 
