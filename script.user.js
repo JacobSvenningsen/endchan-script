@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.3.3
+// @version       1.3.4
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -134,14 +134,7 @@ function updateVideoChild(parent, span) {
     link = link.href
   }
   src.setAttribute('src', link);
-
-  if (link.endsWith(".webm")) {
-    src.setAttribute('type', 'video/webm');
-  } else if (link.endsWith(".mp4")) {
-    src.setAttribute('type', 'video/mp4');
-  } else if (link.endsWith(".ogg")) {
-    src.setAttribute('type', 'video/ogg');
-  }
+  src.setAttribute('type', 'video/'+link.split("video")[1].split(".")[0]); //set the correct videotype
 
   video.appendChild(src)
   video.removeAttribute('controls')
@@ -1220,6 +1213,22 @@ function imageThumbsStyle() {
   return style
 }
 
+function qrUpdatedStyle() {
+  let style = document.createElement("style")
+  style.id = "qr_styles"
+  style.type = "text/css"
+  style.innerText = ' \
+    .selectedCell { \
+        word-break: break-all; \
+    } \
+    \
+    #post-form-inner, #post-form-inner > form, table.post-table { \
+        background: inherit; \
+    } \
+  '
+  return style;
+}
+
 (function() { //fixes post counter and in turn, also post hiding
   console.log("setup")
   var orig = document.getElementsByClassName.bind(document);
@@ -1232,8 +1241,10 @@ function imageThumbsStyle() {
   });
   document.firstElementChild.appendChild(styleForSettingsWindow())
   document.firstElementChild.appendChild(imageThumbsStyle())
+  document.firstElementChild.appendChild(qrUpdatedStyle())
   console.log("done injecting css")
 }).call();
+
 
 
 
