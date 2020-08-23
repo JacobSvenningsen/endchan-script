@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.3.4
+// @version       1.3.5
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -322,24 +322,10 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
   function smallThumbsSettingOnclick() {
     if (localStorage.getItem("smallThumbs_enabled") == "true") {
       localStorage.setItem("smallThumbs_enabled", false)
-      image_thumbs_settings.innerText = '/*\
-      a.imgLink img:not([class="imgExpanded"]), \
-      .uploadCell span img:not([class="imgExpanded"]){ \
-        height: auto; \
-        width: auto; \
-        max-width: 125px; \
-        max-height: 125px; \
-      }*/'
+      image_thumbs_settings.disabled = true
     } else {
       localStorage.setItem("smallThumbs_enabled", "true")
-      image_thumbs_settings.innerText = ' \
-      a.imgLink img:not([class="imgExpanded"]), \
-      .uploadCell span img:not([class="imgExpanded"]){ \
-        height: auto; \
-        width: auto; \
-        max-width: 125px; \
-        max-height: 125px; \
-      }'
+      image_thumbs_settings.disabled = false;
     }
   }
   
@@ -1239,11 +1225,12 @@ function qrUpdatedStyle() {
           return orig(str);
       }
   });
-  document.firstElementChild.appendChild(styleForSettingsWindow())
-  document.firstElementChild.appendChild(imageThumbsStyle())
-  document.firstElementChild.appendChild(qrUpdatedStyle())
+  document.head.appendChild(styleForSettingsWindow())
+  document.head.appendChild(imageThumbsStyle())
+  document.head.appendChild(qrUpdatedStyle())
   console.log("done injecting css")
 }).call();
+
 
 
 
