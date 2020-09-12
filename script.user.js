@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.3.6
+// @version       1.3.7
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -1201,9 +1201,9 @@ function imageThumbsStyle() {
   return style
 }
 
-function qrUpdatedStyle() {
+function extraStyles() {
   let style = document.createElement("style")
-  style.id = "qr_styles"
+  style.id = "fixes_styles"
   style.type = "text/css"
   style.innerText = ' \
     .selectedCell { \
@@ -1212,6 +1212,12 @@ function qrUpdatedStyle() {
     \
     #post-form-inner, #post-form-inner > form, table.post-table { \
         background: inherit; \
+    } \
+    span.spoiler { \
+        background-color: #000; \
+    } \
+    span.spoiler a:not(:hover) { \
+        color: #000; \
     } \
   '
   return style;
@@ -1229,15 +1235,7 @@ function qrUpdatedStyle() {
   });
   document.head.appendChild(styleForSettingsWindow())
   document.head.appendChild(imageThumbsStyle())
-  document.head.appendChild(qrUpdatedStyle())
+  document.head.appendChild(extraStyles())
   console.log("done injecting css")
 }).call();
-
-
-
-
-
-
-
-
 
