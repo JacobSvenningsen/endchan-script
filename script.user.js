@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.3.8
+// @version       1.3.9
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -351,7 +351,7 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
           window.XMLHttpRequest = function() {
             var realXHR = new oldXHR();
             realXHR.addEventListener("readystatechange", function() {
-              if(realXHR.readyState==4 && (realXHR.status==404 || realXHR.status==520)) {
+              if(realXHR.readyState==4 && (realXHR.status==404 || realXHR.status>=500)) {
                 console.log("retrieved 404, refreshing after prefered interval anyway")
                 clearInterval(refreshTimer)
                 startTimer(parseInt(localStorage.getItem("refreshInterval")))
