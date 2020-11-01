@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.3.9
+// @version       1.3.10
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -1079,6 +1079,17 @@ function readyFn() {
     }
   }
   
+  function shortenFilenames(node) {
+    let filenames = node.getElementsByClassName("originalNameLink");
+    
+    for (let i = 0; i < filenames.length; ++i) {
+      if (filenames[i].innerText.length > 38) {
+        filenames[i].title = filenames[i].innerText;
+        filenames[i].innerText = filenames[i].innerText.slice(0,35) + "...";
+      }
+    }
+  }
+  
   const updateNewPosts = function(list, observer) {
     for(let mutation of list) {
       if (mutation.type === 'childList') {
@@ -1094,6 +1105,7 @@ function readyFn() {
             updateCounters(node)
             updateTime(node)
             addHideUserPosts(node)
+            shortenFilenames(node)
             //moveMultipleUploadFromPost(node, false)
             hideThisPost(node)
           }
@@ -1238,4 +1250,5 @@ function extraStyles() {
   document.head.appendChild(extraStyles())
   console.log("done injecting css")
 }).call();
+
 
