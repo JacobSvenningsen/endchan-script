@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.3.10
+// @version       1.3.11
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -635,7 +635,9 @@ function readyFn() {
   if (GM) {
     var window = unsafeWindow
   }
-  
+
+  processPostingQuote = function(l) {/* discard what happens */}
+
   let uniqueIds;
   let refreshInterval = localStorage.getItem("refreshInterval")
   if(!refreshInterval) {
