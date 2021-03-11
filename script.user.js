@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.4.0
+// @version       1.4.1
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -9,8 +9,8 @@
 // @include       https://endchan.net/*
 // @include       http://endchan.org/*
 // @include       https://endchan.org/*
-// @updateURL     https://github.com/JacobSvenningsen/endchan-script/raw/master/script.user.js
-// @downloadURL   https://github.com/JacobSvenningsen/endchan-script/raw/master/script.user.js
+// @updateURL     https://github.com/JacobSvenningsen/endchan-script/raw/feature/mobile/script.user.js
+// @downloadURL   https://github.com/JacobSvenningsen/endchan-script/raw/feature/mobile/script.user.js
 // ==/UserScript==
 
 
@@ -1212,6 +1212,7 @@ function readyFn() {
           qrbutton.disabled = true
         }
         QRpostReply()
+        if (onMobile) {document.getElementById("quick-reply").getElementsByClassName("close-btn")[0].click();}
       }
       let oldDragFunc = document.getElementById("quick-reply").getElementsByClassName("handle")[0].onmousedown
       document.getElementById("quick-reply").getElementsByClassName("handle")[0].onmousedown = function(e) {oldDragFunc(e); e.preventDefault(); e.stopPropagation();}
