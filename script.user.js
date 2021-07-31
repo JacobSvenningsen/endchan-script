@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.3.11
+// @version       1.3.12
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -9,6 +9,8 @@
 // @include       https://endchan.net/*
 // @include       http://endchan.org/*
 // @include       https://endchan.org/*
+// @include       http://endchan.gg/*
+// @include       https://endchan.gg/*
 // @updateURL     https://github.com/JacobSvenningsen/endchan-script/raw/master/script.user.js
 // @downloadURL   https://github.com/JacobSvenningsen/endchan-script/raw/master/script.user.js
 // ==/UserScript==
