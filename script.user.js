@@ -1,10 +1,13 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.3.12
+// @version       1.4.0
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
 // @grant         unsafeWindow
+// @grant         GM.getValue
+// @grant         GM.setValue
+// @grant         GM.listValues
 // @include       http://endchan.net/*
 // @include       https://endchan.net/*
 // @include       http://endchan.org/*
@@ -262,6 +265,35 @@ function qrShortcutsSettingOnclick() {
   }
 }
 
+async function mergePosts() {
+  let sharedPosts = JSON.parse(await GM.getValue("MyPosts_SharedPosts", "[]"));
+  let domainPosts = JSON.parse(localStorage.getItem("myPosts"));
+  if(domainPosts === null) {
+    domainPosts = [];
+  }
+  let length = sharedPosts.length;
+  let found = false;
+  
+  for (let i = 0; i < domainPosts.length; i++) {
+    found = false;
+    for (let j = 0; j < length; j++) {
+      if (domainPosts[i].p === sharedPosts[j].p && domainPosts[i].b === sharedPosts[j].b) {
+        //Item already exists in sharedPosts, skipping
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+    //Didn't find the item in sharedPosts, adding it
+      sharedPosts.push(domainPosts[i]);
+      length += 1;
+    }
+  }
+  domainPosts = sharedPosts;
+  localStorage.setItem("myPosts", JSON.stringify(domainPosts));
+  await GM.setValue("MyPosts_SharedPosts", JSON.stringify(sharedPosts));
+}
+
 function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
   let oldXHR = window.XMLHttpRequest
   var standardQRreplyCallback
@@ -384,6 +416,19 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
         window.QRreplyCallback.stop = standardQRreplyCallback.stop
         localStorage.setItem("clear_spoiler", "true")
       }
+    }
+  }
+  
+  async function myPostsSharing() {
+    let promise = GM.getValue("MyPosts_Shared", false);
+    let wasEnabled = await GM.getValue("MyPosts_Shared", false);
+    if (!wasEnabled) {
+      await GM.setValue("MyPosts_Shared", true);
+      localStorage.setItem("MyPosts_Shared", true);
+      await mergePosts();
+    } else {
+      await GM.setValue("MyPosts_Shared", false);
+      localStorage.setItem("MyPosts_Shared", false);
     }
   }
   
@@ -584,6 +629,7 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
   settingsScreen.appendChild(createPreferedRefreshTimeOption("Prefered Autorefresh Interval", changeRefreshInterval))
   settingsScreen.appendChild(createSettingOption("Retry refreshing despite getting return code 404", "force_refresh", toggleForceReattemptRefresh, false))
   settingsScreen.appendChild(createSettingOption("Clear spoiler after post submission", "clear_spoiler", clearSpoilerFunc, false))
+  settingsScreen.appendChild(createSettingOption("Share MyPosts between domains", "MyPosts_Shared", myPostsSharing, false))
   toggleForceReattemptRefresh()
   toggleForceReattemptRefresh()
   clearSpoilerFunc()
@@ -647,6 +693,40 @@ function readyFn() {
     refreshInterval = 60
   } else {
     refreshInterval = parseInt(refreshInterval)
+  }
+  
+  (async function() {
+    if (await GM.getValue("MyPosts_Shared", undefined) === undefined) {
+      await GM.setValue("MyPosts_Shared", false);
+      localStorage.setItem("MyPosts_Shared", false);
+    }
+  }).call();
+    
+  (async function() {
+    if (await GM.getValue("MyPosts_Shared", false)) {
+      await mergePosts();
+    }
+  }).call();
+  
+  if (typeof(handleConnectionResponse) === "function") {
+    let oldConnectionResponse = handleConnectionResponse;
+
+    function newConnectionResponse(xhr, delegate) {
+      let oldDelegate = delegate;
+      function newDelegate(status, data) {
+        delegate(status, data);
+        (async function() {
+          if (status === "ok" && localStorage.getItem("MyPosts_Shared")) {
+            let items = JSON.parse(await GM.getValue("MyPosts_SharedPosts", "[]"));
+            items.push({b: boardUri, p: data});
+            await GM.setValue("MyPosts_SharedPosts", JSON.stringify(items));
+          }
+        }).call();
+      }
+      window.delegate = newDelegate;
+      oldConnectionResponse(xhr, newDelegate);
+    }
+    window.handleConnectionResponse = newConnectionResponse;
   }
   
   if (typeof(refreshPosts) === "function") {
