@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.4.0
+// @version       1.4.1
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -716,7 +716,7 @@ function readyFn() {
       function newDelegate(status, data) {
         delegate(status, data);
         (async function() {
-          if (status === "ok" && localStorage.getItem("MyPosts_Shared")) {
+          if (status === "ok" && localStorage.getItem("MyPosts_Shared") && typeof(data) === "number") {
             let items = JSON.parse(await GM.getValue("MyPosts_SharedPosts", "[]"));
             items.push({b: boardUri, p: data});
             await GM.setValue("MyPosts_SharedPosts", JSON.stringify(items));
