@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.4.1
+// @version       1.4.2
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -432,6 +432,16 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
     }
   }
   
+  function toggleImagePreview() {
+    if (localStorage.getItem("imagePreview") === "true") {
+      let previews = document.getElementsByClassName("imagePreview");
+      while (previews.length > 0) previews[0].remove();
+      localStorage.setItem("imagePreview", false);
+    } else {
+      localStorage.setItem("imagePreview", true);
+    }
+  }
+  
   function createSettingOption(text, item, func, defaultCheck) {
     let setting = document.createElement("label")
     let input = document.createElement("input")
@@ -630,6 +640,7 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
   settingsScreen.appendChild(createSettingOption("Retry refreshing despite getting return code 404", "force_refresh", toggleForceReattemptRefresh, false))
   settingsScreen.appendChild(createSettingOption("Clear spoiler after post submission", "clear_spoiler", clearSpoilerFunc, false))
   settingsScreen.appendChild(createSettingOption("Share MyPosts between domains", "MyPosts_Shared", myPostsSharing, false))
+  settingsScreen.appendChild(createSettingOption("Preview image in Quick Reply", "imagePreview", toggleImagePreview, true))
   toggleForceReattemptRefresh()
   toggleForceReattemptRefresh()
   clearSpoilerFunc()
@@ -1233,8 +1244,36 @@ function readyFn() {
       }
     }
 
-    //Credit goes to https://stackoverflow.com/a/15369753
     if (document.getElementById('qrbody')) {
+      if (typeof(addSelectedFile) === "function") {
+          let oldAddSelectedFile = addSelectedFile;
+          function newAddSelectedFile (file) {
+            oldAddSelectedFile(file);
+            if (localStorage.getItem("imagePreview") === "true") {
+              let blobIndex = selectedFiles.indexOf(file);
+              let isVideo = selectedFiles[blobIndex].name.endsWith("mp4") || selectedFiles[blobIndex].name.endsWith("webm") || selectedFiles[blobIndex].name.endsWith("ogg");
+              let blobImage = isVideo ? document.createElement("video") : document.createElement("img");
+              blobImage.style.maxHeight = selectedDivQr.childNodes[blobIndex].getBoundingClientRect().height.toString() + "px";
+              blobImage.style.marginTop = "-10px";
+              blobImage.style.float = "right";
+              blobImage.style.maxWidth = (selectedDivQr.childNodes[blobIndex].getBoundingClientRect().width 
+                - (selectedDivQr.childNodes[blobIndex].childNodes[0].getBoundingClientRect().width + 10 
+                   + selectedDivQr.childNodes[blobIndex].childNodes[1].getBoundingClientRect().width))
+                .toFixed() + "px";
+              blobImage.classList.add("imagePreview");
+              blobImage.src = URL.createObjectURL(selectedFiles[blobIndex]);
+              selectedDivQr.childNodes[blobIndex].childNodes[1].after(blobImage);
+              if (isVideo) {
+                blobImage.muted = true;
+                blobImage.loop = true;
+                blobImage.play();
+              }
+            }
+          }
+          addSelectedFile = newAddSelectedFile;
+      }
+      
+      //Credit goes to https://stackoverflow.com/a/15369753
       qrbody.onpaste = function (event) {
         // use event.originalEvent.clipboard for newer chrome versions
         var items = (event.clipboardData  || event.originalEvent.clipboardData).items;
