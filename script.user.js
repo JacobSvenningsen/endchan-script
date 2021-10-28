@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.4.2
+// @version       1.4.3
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -1253,13 +1253,23 @@ function readyFn() {
               let blobIndex = selectedFiles.indexOf(file);
               let isVideo = selectedFiles[blobIndex].name.endsWith("mp4") || selectedFiles[blobIndex].name.endsWith("webm") || selectedFiles[blobIndex].name.endsWith("ogg");
               let blobImage = isVideo ? document.createElement("video") : document.createElement("img");
-              blobImage.style.maxHeight = selectedDivQr.childNodes[blobIndex].getBoundingClientRect().height.toString() + "px";
-              blobImage.style.marginTop = "-10px";
-              blobImage.style.float = "right";
-              blobImage.style.maxWidth = (selectedDivQr.childNodes[blobIndex].getBoundingClientRect().width 
-                - (selectedDivQr.childNodes[blobIndex].childNodes[0].getBoundingClientRect().width + 10 
-                   + selectedDivQr.childNodes[blobIndex].childNodes[1].getBoundingClientRect().width))
-                .toFixed() + "px";
+              let currentSelectedDiv = selectedDivQr.getElementsByClassName("selectedCell")[blobIndex];
+              
+              //Flexbox on parent
+              currentSelectedDiv.style.display = "flex";
+              currentSelectedDiv.style.flexWrap = "wrap";
+              currentSelectedDiv.style.gap = "0px 2pt";
+              
+              //force SpoilerPanel on newline if exists
+              let spoilerpanel = currentSelectedDiv.getElementsByClassName("spoilerPanel")[0];
+              if (spoilerpanel) {
+                spoilerpanel.style.flexBasis = "100%";
+              }
+              //Filename
+              currentSelectedDiv.childNodes[1].style.flex = "1 1 0%";
+              
+              blobImage.style.maxHeight = "83px";
+              blobImage.style.maxWidth = "30%";
               blobImage.classList.add("imagePreview");
               blobImage.src = URL.createObjectURL(selectedFiles[blobIndex]);
               selectedDivQr.childNodes[blobIndex].childNodes[1].after(blobImage);
