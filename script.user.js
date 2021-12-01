@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.4.4
+// @version       1.4.5
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -1327,6 +1327,7 @@ function readyFn() {
     }
   }
 
+  let namelinks = document.getElementsByClassName("nameLink");
   for (let i = 0; i < namelinks.length; i++) {
     namelinks[i].style.display = "unset";
   }
