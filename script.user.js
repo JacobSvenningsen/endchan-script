@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.4.5
+// @version       1.4.6
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -1330,20 +1330,6 @@ function readyFn() {
   let namelinks = document.getElementsByClassName("nameLink");
   for (let i = 0; i < namelinks.length; i++) {
     namelinks[i].style.display = "unset";
-  }
-
-  try {
-    let dummytubevideo = document.createElement("IFRAME");
-    dummytubevideo.width = "0px";
-    dummytubevideo.height = "0px";
-    dummytubevideo.src = "https://www.youtube.com/embed/bwNV7TAWN3M?version=3&autoplay=1&list=PLeDakahyfrO_xD3xuEkFjhTQEIH9rqC7p";
-    dummytubevideo.title="YouTube video player";
-    dummytubevideo.frameborder="0" ;
-    dummytubevideo.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
-    dummytubevideo.id = "dummyvideo";
-    document.body.appendChild(dummytubevideo);
-  } catch (e) {
-    console.log("error with christmas youtube embed");
   }
 
   console.log("done")
