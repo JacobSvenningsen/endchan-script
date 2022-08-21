@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.4.6
+// @version       1.5.0
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -1388,6 +1388,17 @@ function extraStyles() {
   document.head.appendChild(imageThumbsStyle())
   document.head.appendChild(extraStyles())
   console.log("done injecting css")
+  console.log("Truncating amounts of MyPosts");
+  let myPosts = localStorage.myPosts;
+  if (myPosts) {
+    let parsedMyPosts = JSON.parse(myPosts);
+    let stringified = JSON.stringify(parsedMyPosts.splice(parsedMyPosts.length - 1000));
+    localStorage.myPosts = stringified;
+    (async function() {
+      if (await GM.getValue("MyPosts_Shared", false)) {
+        await GM.setValue("MyPosts_SharedPosts", stringified);
+      }
+    }).call();
+  }
+  console.log("Done truncating posts");
 }).call();
-
-
