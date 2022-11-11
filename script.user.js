@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.5.1
+// @version       1.5.2
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -1301,9 +1301,6 @@ function readyFn() {
         }
       }
       qrbutton.onclick = function (event) {
-        if (selectedFiles[0] || qrbody.textLength) {
-          qrbutton.disabled = true
-        }
         QRpostReply()
       }
       let oldDragFunc = document.getElementById("quick-reply").getElementsByClassName("handle")[0].onmousedown
