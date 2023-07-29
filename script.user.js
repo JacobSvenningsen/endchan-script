@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.5.2
+// @version       1.5.3
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -676,7 +676,7 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
 function namefield(window) {
   if (document.getElementById("fieldName") !== null) {
     fieldName.value = localStorage.getItem("namefield");
-    if (window.show_quick_reply) {
+    if (document.getElementById("qrname")) {
       qrname.value = fieldName.value
       qrname.oninput = function() {
         localStorage.setItem("namefield", qrname.value)
@@ -757,7 +757,7 @@ function readyFn() {
     window.limitRefreshWait = parseInt(localStorage.getItem("refreshInterval"))
   }
   document.body.firstElementChild.appendChild(settingsElement(applyHoverImgEvent, window, updateAllLinks))
-  if (window.show_quick_reply) {
+  if (window.show_quick_reply && document.getElementById("threadIdentifier")) {
     window.show_quick_reply();
     document.getElementById("quick-reply").getElementsByClassName("close-btn")[0].onclick = function() {document.getElementById("quick-reply").style.display = "none"}
   }
@@ -900,7 +900,7 @@ function readyFn() {
       nodes[i].onclick = function(e) {
         var toQuote = this.innerText;
 
-        if (typeof add_quick_reply_quote != "undefined") {
+        if (typeof add_quick_reply_quote != "undefined" && document.getElementById("threadIdentifier") != null) {
           if (!document.getElementById("qrbody") && window.show_quick_reply) {
             window.show_quick_reply()
           }
@@ -1245,7 +1245,7 @@ function readyFn() {
       }
     }
 
-    if (document.getElementById('qrbody')) {
+    if (document.getElementById('qrbody') && document.getElementById("threadIdentifier")) {
       if (typeof(addSelectedFile) === "function") {
           let oldAddSelectedFile = addSelectedFile;
           function newAddSelectedFile (file) {
