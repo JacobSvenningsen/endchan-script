@@ -1,14 +1,19 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.4.1
+// @version       1.5.3
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
 // @grant         unsafeWindow
+// @grant         GM.getValue
+// @grant         GM.setValue
+// @grant         GM.listValues
 // @include       http://endchan.net/*
 // @include       https://endchan.net/*
 // @include       http://endchan.org/*
 // @include       https://endchan.org/*
+// @include       http://endchan.gg/*
+// @include       https://endchan.gg/*
 // @updateURL     https://github.com/JacobSvenningsen/endchan-script/raw/feature/mobile/script.user.js
 // @downloadURL   https://github.com/JacobSvenningsen/endchan-script/raw/feature/mobile/script.user.js
 // ==/UserScript==
@@ -127,11 +132,11 @@ function KeyPress(e) { //Adds quick shortcuts for markup and posting
       case 22: //Autism
         insertAtCaret("[autism]","[/autism]");
         break;
-        
+
       default: //shouldn't get here ever
         break;
     }
-    e.preventDefault();     
+    e.preventDefault();
     e.stopPropagation();
   }
 }
@@ -177,12 +182,12 @@ function mouseoverfunc() {
     newnode = this.cloneNode(true)
     setNodeStyle(newnode)
     updateVideoChild(newnode, this)
-    newnode.children[1].setAttribute('muted', true) 
+    newnode.children[1].setAttribute('muted', true)
     newnode.children[1].muted = true //If the video isn't forced to be muted, then some browsers refuse to autoplay the video
     newnode.children[2].remove()
-    
+
     document.body.prepend(newnode)
-    newnode.children[1].play()  
+    newnode.children[1].play()
   } else { //pictures
     if (this.lastElementChild.className && this.lastElementChild.style.display != "none") { // if the image is expanded, we don't want to create a hover image
       return
@@ -213,7 +218,7 @@ function styleForSettingsWindow() {
   var style = document.createElement("style")
   style.id = "settings_screen_style"
   style.type = "text/css"
-  style.innerText = 
+  style.innerText =
     '#settingsWindow, #qrSettingsScreen { \
       display:none; \
     } \
@@ -283,38 +288,67 @@ function qrShortcutsSettingOnclick() {
   }
 }
 
+async function mergePosts() {
+  let sharedPosts = JSON.parse(await GM.getValue("MyPosts_SharedPosts", "[]"));
+  let domainPosts = JSON.parse(localStorage.getItem("myPosts"));
+  if(domainPosts === null) {
+    domainPosts = [];
+  }
+  let length = sharedPosts.length;
+  let found = false;
+
+  for (let i = 0; i < domainPosts.length; i++) {
+    found = false;
+    for (let j = 0; j < length; j++) {
+      if (domainPosts[i].p === sharedPosts[j].p && domainPosts[i].b === sharedPosts[j].b) {
+        //Item already exists in sharedPosts, skipping
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+    //Didn't find the item in sharedPosts, adding it
+      sharedPosts.push(domainPosts[i]);
+      length += 1;
+    }
+  }
+  domainPosts = sharedPosts;
+  localStorage.setItem("myPosts", JSON.stringify(domainPosts));
+  await GM.setValue("MyPosts_SharedPosts", JSON.stringify(sharedPosts));
+}
+
 function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
   let oldXHR = window.XMLHttpRequest
   var standardQRreplyCallback
-  
+
   if (window.QRreplyCallback) {
     standardQRreplyCallback = window.QRreplyCallback
     standardQRreplyCallback.progress = window.QRreplyCallback.progress
     standardQRreplyCallback.stop = window.QRreplyCallback.stop
   }
-  
+
   var ele = document.createElement("a")
   ele.innerText = "[script settings]"
   let url = document.URL.split("#")[0]
   url += "#settings"
-  
+
   ele.href = url
   ele.style.float = "right"
   ele.style.cursor = "pointer"
-  
+
   var settingsBox = document.createElement("div")
   settingsBox.id = "settingsWindow"
   settingsBox.style.backgroundColor = window.getComputedStyle(document.getElementsByTagName("NAV")[0]).backgroundColor
   //settingsBox.classList.add("closed")
-  
+
   var header = document.createElement("h1")
   header.innerText = "Settings"
   settingsBox.appendChild(header)
   settingsBox.appendChild(document.createElement("hr"))
-  
+
   var settingsScreen = document.createElement("div")
   settingsScreen.id = "settings"
-  
+
   function togglePostInlining() {
     if (localStorage.getItem("postInlining") == "false") {
       localStorage.setItem("postInlining", true)
@@ -324,7 +358,7 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
       updateAllLinks(false)
     }
   }
-  
+
   function hoverImageSettingOnclick() {
     if (localStorage.getItem("hover_enabled") == "false") {
       localStorage.setItem("hover_enabled", true)
@@ -351,7 +385,7 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
       image_thumbs_settings.disabled = false;
     }
   }
-  
+
   function changeRefreshInterval() {
     if(this.value > this.max) {
       this.value = this.max
@@ -361,7 +395,7 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
     localStorage.setItem("refreshInterval", this.value)
     window.limitRefreshWait = parseInt(this.value)
   }
-  
+
   function toggleForceReattemptRefresh() {
     if (localStorage.getItem("force_refresh") == "true") {
       window.XMLHttpRequest = oldXHR
@@ -382,12 +416,12 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
             }, false);
             return realXHR;
           }
-        } 
+        }
       }
       localStorage.setItem("force_refresh", true)
     }
   }
-  
+
   function clearSpoilerFunc() {
     if (standardQRreplyCallback) {
       if (localStorage.getItem("clear_spoiler") == "true") {
@@ -407,12 +441,35 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
       }
     }
   }
-  
+
+  async function myPostsSharing() {
+    let promise = GM.getValue("MyPosts_Shared", false);
+    let wasEnabled = await GM.getValue("MyPosts_Shared", false);
+    if (!wasEnabled) {
+      await GM.setValue("MyPosts_Shared", true);
+      localStorage.setItem("MyPosts_Shared", true);
+      await mergePosts();
+    } else {
+      await GM.setValue("MyPosts_Shared", false);
+      localStorage.setItem("MyPosts_Shared", false);
+    }
+  }
+
+  function toggleImagePreview() {
+    if (localStorage.getItem("imagePreview") === "true") {
+      let previews = document.getElementsByClassName("imagePreview");
+      while (previews.length > 0) previews[0].remove();
+      localStorage.setItem("imagePreview", false);
+    } else {
+      localStorage.setItem("imagePreview", true);
+    }
+  }
+
   function createSettingOption(text, item, func, defaultCheck) {
     let setting = document.createElement("label")
     let input = document.createElement("input")
     let description = document.createElement("span")
-    
+
     let checked = localStorage.getItem(item)
     if (!checked) {
       checked = typeof(defaultCheck) === "boolean" ? defaultCheck : defaultCheck.enabled
@@ -428,7 +485,7 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
       defaultCheck.enabled = true
       if (item === "qrshortcuts") localStorage.setItem(item, JSON.stringify(defaultCheck))
     } else {
-      checked = JSON.parse(checked).enabled      
+      checked = JSON.parse(checked).enabled
     }
     input.type = "checkbox"
     input.checked = checked
@@ -436,20 +493,20 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
     input.style.marginRight = "4px"
     input.style.marginLeft = "4px"
     description.innerText = text
-    
+
     setting.appendChild(input)
     setting.appendChild(description)
     setting.classList.add("setting")
     return setting
   }
-  
+
   function createQRShortcutsSettingsScreen(qrsettingItem, defaultQrSettings) {
     function createQrSettingItem(key, value) {
       let setting = document.createElement("label")
       let input = document.createElement("input")
       let description = document.createElement("span")
       let shortcut = document.createElement("input")
-      
+
       input.type = "checkbox"
       input.checked = value.enabled
       input.onchange = function() {
@@ -472,7 +529,7 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
       input.style.marginRight = "4px"
       input.style.marginLeft = "4px"
       description.innerText = key + " shortcut"
-      
+
       shortcut.type = "text"
       shortcut.classList.add("shortcut")
       let val = (value.ctrl ? "ctrl+" : "") + (value.alt ? "alt+" : "") + (value.shift ? "shift+" : "") + value.keyCode
@@ -482,7 +539,7 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
           let option = qrSettings.options[key];
           let entry = (option.ctrl ? "C" : "") + (option.alt ? "A" : "") + (option.shift ? "S" : "") + option.keyCode;
           if(option.enabled) keyPressMap.delete(entry);
-          qrSettings.options[key] = 
+          qrSettings.options[key] =
             { "enabled": option.enabled
             , "ctrl": e.ctrlKey
             , "alt": e.altKey
@@ -506,7 +563,7 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
         }
       }
       shortcut.style.marginRight = "1em";
-      
+
       //update keyPressMap
       if (value.enabled) {
         let entry = (value.ctrl ? "C" : "") + (value.alt ? "A" : "") + (value.shift ? "S" : "") + value.keyCode;
@@ -518,7 +575,7 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
       setting.classList.add("setting")
       return setting
     }
-    
+
     let b = document.createElement("button")
     b.type = "button"
     b.id = "qrSettingsButton"
@@ -526,13 +583,13 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
     b.innerText = "Shortcuts"
     b.style.marginRight = "12pt"
     b.style.float = "right"
-    
+
     let qss = document.createElement("div")
     qss.id = "qrSettingsScreen"
-    
+
     qrSettings = JSON.parse(localStorage.getItem("qrshortcuts"))
     if (qrSettings.enabled) b.style.display = "block"; else b.style.display = "none";
-    
+
     let keys = Object.keys(qrSettings.options);
     for (let i = 0; i < keys.length; i++) {
       qss.append(createQrSettingItem(keys[i], qrSettings.options[keys[i]]))
@@ -545,17 +602,17 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
         qss.append(createQrSettingItem(remainingKeys[i], tempSettings[remainingKeys[i]]));
       }
     }
-    
+
     qss.style.backgroundColor = settingsBox.style.backgroundColor
     qrsettingItem.append(b)
     return qss;
   }
-  
+
   function createPreferedRefreshTimeOption(text, func) {
     let setting = createSettingOption(text, "refreshInterval", func, false)
     setting.firstElementChild.type = "number"
     setting.firstElementChild.style.width = "80px"
-    setting.firstElementChild.min="10" 
+    setting.firstElementChild.min="10"
     setting.firstElementChild.max="600"
     if (localStorage.getItem("refreshInterval") === "false") localStorage.setItem("refreshInterval", 20)
     setting.firstElementChild.value=localStorage.getItem("refreshInterval")
@@ -563,13 +620,13 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
     setting.firstElementChild.oninput=func
     return setting
   }
-  
-  
+
+
   function defaultQrSettings() {
     function getSetting(enabled, ctrl, shift, code, index) {return {"enabled": enabled, "ctrl": ctrl, "alt": false, "shift": shift, "keyCode": code, "index": index}}
-    let settings = 
+    let settings =
       { "enabled": false
-      , "options": 
+      , "options":
         { "bold": getSetting(true, true, false, "B", 1)
         , "italics": getSetting(true, true, false, "I", 2)
         , "underline": getSetting(true, true, true, "U", 3)
@@ -594,10 +651,10 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
         , "autism": getSetting(false, true, false, "'", 22)
         }
       }
-    
+
     return settings
   }
-  
+
   settingsScreen.appendChild(createSettingOption("Post Inlining", "postInlining", togglePostInlining, true))
   settingsScreen.appendChild(createSettingOption("Quick Reply Shortcuts", "qrshortcuts", qrShortcutsSettingOnclick, defaultQrSettings()))
   settingsScreen.appendChild(createSettingOption("Image Hover", "hover_enabled", hoverImageSettingOnclick, true))
@@ -605,26 +662,28 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
   settingsScreen.appendChild(createPreferedRefreshTimeOption("Prefered Autorefresh Interval", changeRefreshInterval))
   settingsScreen.appendChild(createSettingOption("Retry refreshing despite getting return code 404", "force_refresh", toggleForceReattemptRefresh, false))
   settingsScreen.appendChild(createSettingOption("Clear spoiler after post submission", "clear_spoiler", clearSpoilerFunc, false))
+  settingsScreen.appendChild(createSettingOption("Share MyPosts between domains", "MyPosts_Shared", myPostsSharing, false))
+  settingsScreen.appendChild(createSettingOption("Preview image in Quick Reply", "imagePreview", toggleImagePreview, true))
   toggleForceReattemptRefresh()
   toggleForceReattemptRefresh()
   clearSpoilerFunc()
   clearSpoilerFunc()
 
-  
+
   settingsBox.appendChild(settingsScreen)
   settingsBox.style.zIndex = "100"
   document.body.after(settingsBox)
   settingsBox.after(createQRShortcutsSettingsScreen(settingsScreen.children[1], defaultQrSettings))
-  
+
   let overlay = document.createElement("div")
   overlay.id = "settingsOverlay"
   overlay.onclick = function() {settingsWindow.classList.toggle("opened"); settingsOverlay.classList.toggle("opened");}
-  
+
   settingsWindow.before(overlay)
   let qoverlay = document.createElement("div")
   qoverlay.id = "qrSettingsScreenOverlay"
   qoverlay.onclick = function() {qrSettingsScreen.classList.toggle("opened"); qrSettingsScreenOverlay.classList.toggle("opened");}
-  
+
   settingsWindow.before(qoverlay)
   ele.onmousedown = function(e) {
     settingsBox.classList.toggle("opened")
@@ -632,15 +691,15 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
     e.preventDefault()
     e.stopPropagation()
   }
-  
-  
+
+
   return ele
 }
 
 function namefield(window) {
   if (document.getElementById("fieldName") !== null) {
     fieldName.value = localStorage.getItem("namefield");
-    if (window.show_quick_reply) {
+    if (document.getElementById("qrname")) {
       qrname.value = fieldName.value
       qrname.oninput = function() {
         localStorage.setItem("namefield", qrname.value)
@@ -654,12 +713,14 @@ function namefield(window) {
 }
 
 function readyFn() {
+
   console.log("Running script")
   
   if (GM) {
     var window = unsafeWindow
   }
-    processPostingQuote = function(l) {/* discard what happens */}
+  
+  processPostingQuote = function(l) {/* discard what happens */}
   
   function mobileCheck() {
     let check = false;
@@ -672,7 +733,7 @@ function readyFn() {
   if (onMobile) {
     document.head.appendChild(mobileStyle());
   }
-  
+
   let uniqueIds;
   let refreshInterval = localStorage.getItem("refreshInterval")
   if(!refreshInterval) {
@@ -681,9 +742,43 @@ function readyFn() {
   } else {
     refreshInterval = parseInt(refreshInterval)
   }
-  
+
+  (async function() {
+    if (await GM.getValue("MyPosts_Shared", undefined) === undefined) {
+      await GM.setValue("MyPosts_Shared", false);
+      localStorage.setItem("MyPosts_Shared", false);
+    }
+  }).call();
+
+  (async function() {
+    if (await GM.getValue("MyPosts_Shared", false)) {
+      await mergePosts();
+    }
+  }).call();
+
+  if (typeof(handleConnectionResponse) === "function") {
+    let oldConnectionResponse = handleConnectionResponse;
+
+    function newConnectionResponse(xhr, delegate) {
+      let oldDelegate = delegate;
+      function newDelegate(status, data) {
+        delegate(status, data);
+        (async function() {
+          if (status === "ok" && localStorage.getItem("MyPosts_Shared") && typeof(data) === "number") {
+            let items = JSON.parse(await GM.getValue("MyPosts_SharedPosts", "[]"));
+            items.push({b: boardUri, p: data});
+            await GM.setValue("MyPosts_SharedPosts", JSON.stringify(items));
+          }
+        }).call();
+      }
+      window.delegate = newDelegate;
+      oldConnectionResponse(xhr, newDelegate);
+    }
+    window.handleConnectionResponse = newConnectionResponse;
+  }
+
   if (typeof(refreshPosts) === "function") {
-    
+
     let oldRefreshPosts = refreshPosts
     let oldRefreshInterval = 0
     function newRefreshPosts(manual) {
@@ -693,12 +788,12 @@ function readyFn() {
     }
     window.refreshPosts = newRefreshPosts
   }
-  
+
   if(typeof refreshTimer !== "undefined") {
     window.limitRefreshWait = parseInt(localStorage.getItem("refreshInterval"))
   }
   document.body.firstElementChild.appendChild(settingsElement(applyHoverImgEvent, window, updateAllLinks))
-  if (window.show_quick_reply) {
+  if (window.show_quick_reply && document.getElementById("threadIdentifier")) {
     window.show_quick_reply();
     document.getElementById("quick-reply").getElementsByClassName("close-btn")[0].onclick = function() {document.getElementById("quick-reply").style.display = "none"}
   }
@@ -718,13 +813,13 @@ function readyFn() {
       };
     }
   }
-  
+
   function insertBreak(eles) {
     for (let i = 0; i < eles.length; i++) {
       eles[i].before(document.createElement("div"))
     }
   }
-  
+
   function setIdTextColor(eles) {
     for (let i = 0; i < eles.length; i++) {
       var colorAsHex = eles[i].innerText
@@ -736,18 +831,18 @@ function readyFn() {
       // http://www.w3.org/TR/AERT#color-contrast
       var o = Math.round(((rgb[0] * 299) + (rgb[1] * 587) + (rgb[2] * 114)) / 1000);
       var color = (o > 125) ? 'black' : 'white';
-      eles[i].style.color = color 
+      eles[i].style.color = color
       eles[i].style.borderRadius = "5px"
       eles[i].style.padding = "0 4px 0"
     }
   }
-  
+
   function createPostStub(content, classes) {
     let ele = document.createElement("div")
     ele.classList.add(classes[0]); ele.classList.add(classes[1]);
     let c = document.createElement("a")
     c.innerText = content
-    
+
     if (classes[0] === "hiddenUser") {
       c.onclick = function() {
         let id = this.innerText.slice(this.innerText.length-7, this.innerText.length-1)
@@ -760,7 +855,7 @@ function readyFn() {
         }
         let i = posts.length-1;
         while (i>=0) {posts[i].remove(); i--;}
-        
+
       }
     } else {
       c.onclick = function() {
@@ -771,14 +866,14 @@ function readyFn() {
       }
     }
     ele.appendChild(c)
-    
-    return ele    
+
+    return ele
   }
-  
+
   function addHideUserPosts(node) {
     let hideUserPosts = node.getElementsByClassName("linkQuote")
     let hidePost = node.getElementsByClassName("hidePost")
-    
+
     if (hideUserPosts.length > 0) {
       let postNum = node.getElementsByClassName("linkQuote")[0].innerText
       hideUserPosts = hideUserPosts[0].nextElementSibling.nextElementSibling
@@ -788,11 +883,11 @@ function readyFn() {
         hideUserPosts.onclick = function() {
           let threads = document.getElementsByClassName("opCell")
           localStorage.setItem("hidden_user_"+boardUri+id, id)
-     
+
           for (let i = 0; i < threads.length; i++) {
             var posts = threads[i].getElementsByClassName("postCell")
             for (let j = 0; j < posts.length; j++) {
-              let tid = posts[j].getElementsByClassName("labelId")[0] 
+              let tid = posts[j].getElementsByClassName("labelId")[0]
               if (tid && tid.innerText.slice(0,6) === id) {
                 let stub = createPostStub("[Show hidden user " + id + "]", ["hiddenUser", id])
                 posts[j].before(stub)
@@ -802,7 +897,7 @@ function readyFn() {
           }
         }
       }
-    
+
       if (hidePost[0]) {
         hidePost[0].id = "hide_"+boardUri+"_PostNumber_"+postNum
       }
@@ -810,13 +905,13 @@ function readyFn() {
         localStorage.setItem("hidden_post_"+boardUri+postNum, postNum)
         let stub = createPostStub("[Show hidden post " + postNum + "]", ["hiddenPost", postNum])
         node.before(stub)
-        node.style.display = "none"        
-        e.preventDefault();     
-        e.stopPropagation(); 
+        node.style.display = "none"
+        e.preventDefault();
+        e.stopPropagation();
       }
     }
   }
-  
+
   function hideThisPost(node) {
     let hasId = node.getElementsByClassName("labelId")[0]
     let id = hasId ? hasId.innerText.slice(0,6) : ""
@@ -835,13 +930,13 @@ function readyFn() {
     }
     return postHidden;
   }
-  
+
   function replaceLinkQuoting(nodes) {
     for(let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
       nodes[nodeIndex].onclick = function(e) {
         var toQuote = this.innerText;
 
-        if (typeof add_quick_reply_quote != "undefined") {
+        if (typeof add_quick_reply_quote != "undefined" && document.getElementById("threadIdentifier") != null) {
           if (!document.getElementById("qrbody") && window.show_quick_reply) {
             window.show_quick_reply()
           }
@@ -870,12 +965,12 @@ function readyFn() {
         }
 
         document.getElementById('fieldMessage').value += '>>' + toQuote + '\n';
-        e.preventDefault();     
-        e.stopPropagation(); 
+        e.preventDefault();
+        e.stopPropagation();
       }
     }
   }
-  
+
   function setOnclickEvent(clonedNode, origNode) {
     var newPics = clonedNode.getElementsByClassName("uploadCell")
     var origPics = origNode.getElementsByClassName("uploadCell")
@@ -906,7 +1001,7 @@ function readyFn() {
       }
     }
   }
-  
+
   function insertInlinePost(quote) {
     if (quote.tagName == "A") {
       if (document.getElementById(quote.innerText.slice(2).split(" ")[0])) {
@@ -949,21 +1044,21 @@ function readyFn() {
       }
     }
   }
-  
+
   function embeddedLinkHover(e) {
     var linked = document.getElementById(this.innerText.slice(2).split(" ")[0])
     let node = linked.cloneNode(true);
-    node.id = "appendedNode"    
+    node.id = "appendedNode"
     node.style.position = "fixed"
     var id = node.getElementsByClassName("labelId")[0]
     if (id) {
       id.classList.remove("labelId")
     }
-    node.style.left = e.clientX + 10 + 'px'  
+    node.style.left = e.clientX + 10 + 'px'
     threadList.getElementsByClassName("divPosts")[0].appendChild(node)
     node.style.top = (e.clientY + appendedNode.clientHeight > window.innerHeight - 10) ? window.innerHeight - appendedNode.clientHeight - 10 + 'px' : e.clientY + 'px'
   }
-  
+
   function updateLinks(parent, linkStr, updateEvents, updateMap) {
     var links = parent.getElementsByClassName(linkStr)
     if (linkStr == "quoteLink") {
@@ -974,7 +1069,7 @@ function readyFn() {
         }
         if (updateEvents) {
           if (d && !d.classList.contains("opCell")) {
-            links[i].onmouseenter = embeddedLinkHover 
+            links[i].onmouseenter = embeddedLinkHover
             links[i].onmouseout = function() { var node = document.getElementById("appendedNode"); if(node) {node.remove()} }
             insertInlinePost(links[i])
           } else if (!links[i].innerText.endsWith("(cross-thread)")) {
@@ -999,7 +1094,7 @@ function readyFn() {
       }
     }
   }
-  
+
   function updateAllLinks(inliningEnabled) {
     if (inliningEnabled) {
       if (document.getElementById("threadList")) {
@@ -1018,7 +1113,7 @@ function readyFn() {
       })
     }
   }
-  
+
   function updateNewlyCreatedBacklinks(node, updateLink) {
     var quotes = node.getElementsByClassName("quoteLink")
     for (let i = 0; i < quotes.length; i++) {
@@ -1043,9 +1138,9 @@ function readyFn() {
         }
         quotes[i].innerText = quotes[i].innerText.endsWith("thread)") ? quotes[i].innerText : quotes[i].innerText+" (cross-thread)"
       }
-    }  
+    }
   }
-  
+
   function addCounters() {
     let parent = document.createElement("span")
     let postCounter = document.createElement("div")
@@ -1054,7 +1149,7 @@ function readyFn() {
     let separator = document.createElement("text")
     let ids = threadList.getElementsByClassName("labelId")
     let idStrings = []
-    
+
     separator.innerText = " / "
     if(ids.length) {
       for(let i = 0; i < ids.length; i++) {
@@ -1070,10 +1165,10 @@ function readyFn() {
     } else {
       parent.title = "posts / files"
     }
-    
+
     postCounter.id = "postCounter"
     imgCounter.id = "imgCounter"
-    
+
     parent.style.float = "right"
     parent.style.position = "absolute"
     parent.style.marginRight = "10px"
@@ -1081,22 +1176,22 @@ function readyFn() {
     parent.style.display = "inline"
     parent.style.right = "0px"
     parent.style.zIndex = "-1"
-    
+
     postCounter.innerText = threadList.getElementsByClassName("postCell").length
     imgCounter.innerText = threadList.getElementsByClassName("uploadCell").length
-    
+
     postCounter.style.display = "inline"
     imgCounter.style.display = "inline"
-    
+
     parent.appendChild(postCounter)
     parent.appendChild(separator)
     parent.appendChild(imgCounter)
-    
+
     if(document.getElementsByClassName("divRefresh")[0]) {
       document.getElementsByClassName("divRefresh")[0].firstElementChild.after(parent)
     }
   }
-  
+
   function updateCounters(node) {
     postCounter.innerText = parseInt(postCounter.innerText) + 1
     imgCounter.innerText = parseInt(imgCounter.innerText) + node.getElementsByClassName("uploadCell").length
@@ -1107,11 +1202,11 @@ function readyFn() {
       }
     }
   }
-  
+
   function updateTime(node) {
     window.updateTimeNode(node.getElementsByClassName("labelCreated")[0], useLocaltime.checked)
   }
-  
+
   function moveMultipleUploadFromPost(post, isOP) {
     if (post.classList.contains("multipleUploads")) {
       post.classList.remove("multipleUploads")
@@ -1119,10 +1214,10 @@ function readyFn() {
       addTo.classList.add("multipleUploads")
     }
   }
-  
+
   function shortenFilenames(node) {
     let filenames = node.getElementsByClassName("originalNameLink");
-    
+
     for (let i = 0; i < filenames.length; ++i) {
       if (filenames[i].innerText.length > 38) {
         filenames[i].title = filenames[i].innerText;
@@ -1130,7 +1225,7 @@ function readyFn() {
       }
     }
   }
-  
+
   const updateNewPosts = function(list, observer) {
     for(let mutation of list) {
       if (mutation.type === 'childList') {
@@ -1156,7 +1251,7 @@ function readyFn() {
   }
 
 
-  
+
   function moveMultipleUploadsClassInit(threads) {
     opCells = threads.childNodes
     for (let i = 0; i < opCells.length; ++i) {
@@ -1169,7 +1264,7 @@ function readyFn() {
       }
     }
   }
-  
+
   if (document.getElementById("threadList")) {
     setLoop(threadList.getElementsByTagName("video"))
     applyHoverImgEvent(threadList.getElementsByClassName("uploadCell"))
@@ -1185,13 +1280,51 @@ function readyFn() {
     }
     if (document.getElementById('postreply')) {
       jsButton.onclick = function() {
-        postReply(); 
+        postReply();
         if(document.getElementById("qrbody")) {qrbody.value = ""}
       }
     }
 
-    //Credit goes to https://stackoverflow.com/a/15369753
-    if (document.getElementById('qrbody')) {
+    if (document.getElementById('qrbody') && document.getElementById("threadIdentifier")) {
+      if (typeof(addSelectedFile) === "function") {
+          let oldAddSelectedFile = addSelectedFile;
+          function newAddSelectedFile (file) {
+            oldAddSelectedFile(file);
+            if (localStorage.getItem("imagePreview") === "true") {
+              let blobIndex = selectedFiles.indexOf(file);
+              let isVideo = selectedFiles[blobIndex].name.endsWith("mp4") || selectedFiles[blobIndex].name.endsWith("webm") || selectedFiles[blobIndex].name.endsWith("ogg");
+              let blobImage = isVideo ? document.createElement("video") : document.createElement("img");
+              let currentSelectedDiv = selectedDivQr.getElementsByClassName("selectedCell")[blobIndex];
+
+              //Flexbox on parent
+              currentSelectedDiv.style.display = "flex";
+              currentSelectedDiv.style.flexWrap = "wrap";
+              currentSelectedDiv.style.gap = "0px 2pt";
+
+              //force SpoilerPanel on newline if exists
+              let spoilerpanel = currentSelectedDiv.getElementsByClassName("spoilerPanel")[0];
+              if (spoilerpanel) {
+                spoilerpanel.style.flexBasis = "100%";
+              }
+              //Filename
+              currentSelectedDiv.childNodes[1].style.flex = "1 1 0%";
+
+              blobImage.style.maxHeight = "83px";
+              blobImage.style.maxWidth = "30%";
+              blobImage.classList.add("imagePreview");
+              blobImage.src = URL.createObjectURL(selectedFiles[blobIndex]);
+              selectedDivQr.childNodes[blobIndex].childNodes[1].after(blobImage);
+              if (isVideo) {
+                blobImage.muted = true;
+                blobImage.loop = true;
+                blobImage.play();
+              }
+            }
+          }
+          addSelectedFile = newAddSelectedFile;
+      }
+
+      //Credit goes to https://stackoverflow.com/a/15369753
       qrbody.onpaste = function (event) {
         // use event.originalEvent.clipboard for newer chrome versions
         var items = (event.clipboardData  || event.originalEvent.clipboardData).items;
@@ -1208,9 +1341,6 @@ function readyFn() {
         }
       }
       qrbutton.onclick = function (event) {
-        if (selectedFiles[0] || qrbody.textLength) {
-          qrbutton.disabled = true
-        }
         QRpostReply()
         if (onMobile) {document.getElementById("quick-reply").getElementsByClassName("close-btn")[0].click();}
       }
@@ -1251,9 +1381,14 @@ function readyFn() {
       }
     }
   }
+
+  let namelinks = document.getElementsByClassName("nameLink");
+  for (let i = 0; i < namelinks.length; i++) {
+    namelinks[i].style.display = "unset";
+  }
+
   console.log("done")
 }
-window.onload = readyFn
 
 function imageThumbsStyle() {
   let style = document.createElement("style")
@@ -1307,7 +1442,19 @@ function extraStyles() {
   document.head.appendChild(imageThumbsStyle())
   document.head.appendChild(extraStyles())
   console.log("done injecting css")
+  console.log("Truncating amounts of MyPosts");
+  let myPosts = localStorage.myPosts;
+  if (myPosts) {
+    let parsedMyPosts = JSON.parse(myPosts);
+    let stringified = JSON.stringify(parsedMyPosts.splice(parsedMyPosts.length - 1000));
+    localStorage.myPosts = stringified;
+    (async function() {
+      if (await GM.getValue("MyPosts_Shared", false)) {
+        await GM.setValue("MyPosts_SharedPosts", stringified);
+      }
+    }).call();
+  }
+  console.log("Done truncating posts");
+
+  readyFn();
 }).call();
-
-
-
