@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.5.3
+// @version       1.5.4
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -1286,6 +1286,9 @@ function readyFn() {
     }
 
     if (document.getElementById('qrbody') && document.getElementById("threadIdentifier")) {
+      let tmpnode = document.createAttribute("contenteditable");
+      tmpnode.value = "true";
+      qrbody.attributes.setNamedItem(tmpnode);
       if (typeof(addSelectedFile) === "function") {
           let oldAddSelectedFile = addSelectedFile;
           function newAddSelectedFile (file) {
