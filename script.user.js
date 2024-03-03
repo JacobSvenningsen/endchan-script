@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.5.4
+// @version       1.5.5
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -797,13 +797,13 @@ function readyFn() {
   }
 
   function applyHoverImgEvent(eles) {
-    if (localStorage.getItem("hover_enabled") == "true") {
-      for (var i = 0; i < eles.length; i++) {
+    for (var i = 0; i < eles.length; i++) {
+      if (localStorage.getItem("hover_enabled") == "true") {
         eles[i].lastElementChild.onmouseover = mouseoverfunc;
         eles[i].lastElementChild.onmouseout = mouseoutfunc;
-        eles[i].lastElementChild.onclick = imageOnClickEvent;
-      };
-    }
+      }
+      eles[i].lastElementChild.onclick = imageOnClickEvent;
+    };
   }
 
   function insertBreak(eles) {
