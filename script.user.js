@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.5.3
+// @version       1.5.4
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -150,6 +150,15 @@ function updateVideoChild(parent, span) {
   video.style.height = "auto"
 }
 
+function handleWebp(node) {
+  let filenames = node.getElementsByClassName("originalNameLink");
+  for (let i = 0; i < filenames.length; ++i) {
+    if (filenames[i].href != undefined && filenames[i].href.endsWith("imagewebp")) {
+      filenames[i].href += ".undefined";
+    }
+  }
+}
+
 function mouseoverfunc() {
   var newnode;
   if(this.tagName == "SPAN") { //video
@@ -171,6 +180,9 @@ function mouseoverfunc() {
     }
     newnode = document.createElement("img")
     newnode.src = this.href
+    if (newnode.src != undefined && newnode.src.endsWith("imagewebp")) {
+      newnode.src += ".undefined";
+    }
     setNodeStyle(newnode)
     document.body.prepend(newnode)
   }
@@ -189,6 +201,14 @@ function mouseoutfunc(e) {
       ele.remove()
     }
   }
+}
+
+function imageOnClickEvent(e) {
+  if (this.href != undefined && this.href.endsWith("imagewebp"))
+  {
+      this.href += ".undefined";
+  }
+  return expandImage(e, this);
 }
 
 function styleForSettingsWindow() {
@@ -707,6 +727,13 @@ function readyFn() {
     refreshInterval = parseInt(refreshInterval)
   }
 
+  if (typeof(boardUri) === "undefined")
+  {
+    let uriToUse = document.URL.split("endchan.")[1].split("/")[1];
+    console.log("boardUri is undefined, setting to", uriToUse);
+    boardUri = uriToUse;
+  }
+
   (async function() {
     if (await GM.getValue("MyPosts_Shared", undefined) === undefined) {
       await GM.setValue("MyPosts_Shared", false);
@@ -772,8 +799,9 @@ function readyFn() {
   function applyHoverImgEvent(eles) {
     if (localStorage.getItem("hover_enabled") == "true") {
       for (var i = 0; i < eles.length; i++) {
-        eles[i].lastElementChild.onmouseover = mouseoverfunc
-        eles[i].lastElementChild.onmouseout = mouseoutfunc
+        eles[i].lastElementChild.onmouseover = mouseoverfunc;
+        eles[i].lastElementChild.onmouseout = mouseoutfunc;
+        eles[i].lastElementChild.onclick = imageOnClickEvent;
       };
     }
   }
@@ -864,14 +892,15 @@ function readyFn() {
 
       if (hidePost[0]) {
         hidePost[0].id = "hide_"+boardUri+"_PostNumber_"+postNum
-      }
-      hidePost[0].onclick = function(e) {
-        localStorage.setItem("hidden_post_"+boardUri+postNum, postNum)
-        let stub = createPostStub("[Show hidden post " + postNum + "]", ["hiddenPost", postNum])
-        node.before(stub)
-        node.style.display = "none"
-        e.preventDefault();
-        e.stopPropagation();
+
+        hidePost[0].onclick = function(e) {
+          localStorage.setItem("hidden_post_"+boardUri+postNum, postNum)
+          let stub = createPostStub("[Show hidden post " + postNum + "]", ["hiddenPost", postNum])
+          node.before(stub)
+          node.style.display = "none"
+          e.preventDefault();
+          e.stopPropagation();
+        }
       }
     }
   }
@@ -1202,6 +1231,7 @@ function readyFn() {
             updateTime(node)
             addHideUserPosts(node)
             shortenFilenames(node)
+            handleWebp(node)
             //moveMultipleUploadFromPost(node, false)
             hideThisPost(node)
           }
@@ -1329,7 +1359,7 @@ function readyFn() {
   for (let i = 0; i < namelinks.length; i++) {
     namelinks[i].style.display = "unset";
   }
-
+  handleWebp(document);
   console.log("done")
 }
 
