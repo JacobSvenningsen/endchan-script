@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-magrathea-script
-// @version       0.1.0
+// @version       0.2.0
 // @namespace     endchan-magrathea-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -536,6 +536,7 @@ async function namefield() {
     namefield.value = name;
     localStorage.name = name;
     if (qr) {
+      qr.style.display = "flex";
       let qrNameField = qr.name;
       qrNameField.value = name;
       qrNameField.oninput = async function() {
@@ -569,7 +570,59 @@ function setIdTextColor(eles) {
   }
 }
 
+function updateQuotes(node) {
+  let eles = node.getElementsByClassName("quote");
+  let nodePostId = node.id;
+  let board = node.attributes.getNamedItem("data-board").value;
+  let thread = document.getElementsByClassName("post-container op")[0].id;
+  let constructedUrlPart = "/" + board + "/thread/" + thread + ".html#";
+  let constructedUrl = constructedUrlPart + nodePostId;
+  let innerText = ">>/" + nodePostId + "/";
+  for (let i = 0; i < eles.length; i++) {
+    let splitPostParts = eles[i].innerText.split("/");
+    if (splitPostParts.length === 3) {
+      let quotedPostId = Number(splitPostParts[1]);
+      if (quotedPostId > 0) {
+        let post = document.getElementById(quotedPostId);
+        let yous = JSON.parse(localStorage.yous);
+        let quotedPostNumber = board + "-" + quotedPostId
+        if (yous.includes(quotedPostNumber)) {
+          eles[i].classList.add("you");
+        }
+        let backlinkRepliesElements = post.getElementsByClassName("replies mt-5 ml-5");
+        if (backlinkRepliesElements.length > 0) {
+          let backlinkRepliesElement = backlinkRepliesElements[0];
+          let backlinkDoesNotExist = true;
+          for (let j = 0; j < backlinkRepliesElement.childNodes.length; j++) {
+            if (backlinkRepliesElement.childNodes[j].innerText === innerText) {
+              backlinkDoesNotExist = false;
+              break;
+            }
+          }
+          if (backlinkDoesNotExist) {
+            let backlink = document.createElement("a");
+            backlink.classList.add("quote");
+            backlink.href = constructedUrl;
+            backlink.innerText = innerText;
+            let span = document.createElement("span");
+            span.appendChild(backlink);
+            backlinkRepliesElement.appendChild(span);
+          }
+        }
+      }
+    }
+  }
+}
 
+function wrapNode(node) {
+  let wrapper = document.createElement("div");
+  wrapper.style.display = "inline-block";
+  wrapper.style.maxWidth = "94%";
+  wrapper.setAttribute("data-types", "post reply");
+  node.parentElement.replaceChild(wrapper, node);
+  wrapper.appendChild(node);
+  wrapper.after(document.createElement("br"));
+}
 
 function SetupObserver()
 {
@@ -577,8 +630,10 @@ function SetupObserver()
     for(let mutation of list) {
       if (mutation.type === 'childList') {
         mutation.addedNodes.forEach(function(node) {
-          if (node.id !== "appendedNode") {
+          if (node.nodeName === "ARTICLE" && node.id !== "appendedNode") {
             setIdTextColor(node.getElementsByClassName("user-id"));
+            updateQuotes(node);
+            wrapNode(node);
           }
         })
       }
