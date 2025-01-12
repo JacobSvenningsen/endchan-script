@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-magrathea-script
-// @version       0.2.0
+// @version       0.2.5
 // @namespace     endchan-magrathea-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -646,6 +646,58 @@ function SetupObserver()
   }
 }
 
+function SetupEmbeddedCloudflare()
+{
+  let threads = document.getElementsByClassName("thread noflex threadsContainer");
+  if (threads.length === 1) {
+    let thread = document.getElementsByClassName("post-container op")[0];
+    let threadId = thread.id;
+    let board = thread.attributes.getNamedItem("data-board").value;
+    let embedded = document.createElement("iframe")
+    embedded.id = "GM_embeddedPage";
+    embedded.type = "text/html";
+    embedded.src = document.URL.split(board)[0];
+    embedded.width = "500";
+    embedded.height = "400";
+
+    let buttonForEmbedding = document.createElement("button");
+    buttonForEmbedding.id = "GM_toggleCloudflare";
+    buttonForEmbedding.innerText = "Toggle Cloudflare authorization window";
+    buttonForEmbedding.onclick = function() {
+      let embeddedElement = document.getElementById("GM_embeddedPage");
+      if (embeddedElement) {
+        embeddedElement.remove();
+      } else {
+        this.parentElement.after(embedded);
+      }
+    };
+
+    let div = document.createElement("div");
+    div.appendChild(buttonForEmbedding);
+    document.getElementById("livetext").after(div);
+
+    if (GM) {
+      var window = unsafeWindow
+    }
+
+    let oldFetch = window.fetch;
+    let newFetch = function(loc) {
+      let r = oldFetch(loc).then(res => {
+        if (loc.includes("/thread/" + threadId + "/refresh") && res.status === 403) {
+          console.log("received " + res.status + " upon refreshing. Embedding cloudflare");
+          if (!document.getElementById("GM_embeddedPage")) {
+            document.getElementById("GM_toggleCloudflare").click();
+          }
+        }
+        return res;
+      });
+      return r;
+    }
+
+    window.fetch = newFetch;
+  }
+}
+
 function readyFn() {
   console.log("Running script");
   SetupSettingsMenuItem();
@@ -653,6 +705,7 @@ function readyFn() {
   namefield();
   SetKeypressOnQr();
   SetupObserver();
+  SetupEmbeddedCloudflare();
   setIdTextColor(document.getElementsByClassName("user-id"));
 }
 
