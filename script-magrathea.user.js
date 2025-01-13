@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-magrathea-script
-// @version       0.2.6
+// @version       0.2.7
 // @namespace     endchan-magrathea-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -287,16 +287,24 @@ async function settingsElement(window) {
     return qss;
   }
 
-  async function createPreferedRefreshTimeOption(text, func) {
-    let setting = await createSettingOption(text, "refreshInterval", func, false)
-    setting.firstElementChild.type = "number"
-    setting.firstElementChild.style.width = "80px"
-    setting.firstElementChild.min="10"
-    setting.firstElementChild.max="600"
-    /*if (localStorage.getItem("refreshInterval") === "false") localStorage.setItem("refreshInterval", 20)
-    setting.firstElementChild.value=localStorage.getItem("refreshInterval")*/
-    setting.firstElementChild.onchange=null
-    setting.firstElementChild.oninput=func
+  async function createPreferedRefreshTimeOption(text) {
+    let func = async function() {
+      if(this.value > this.max) {
+        this.value = this.max;
+      } else if(this.value < this.min) {
+        this.value = this.min;
+      }
+      await GM.setValue("Settings.RefreshInterval", this.value);
+    };
+    let defaultValue = await GM.getValue("Settings.RefreshInterval", "600");
+    let setting = await createSettingOption(text, "refreshInterval", func, false);
+    setting.firstElementChild.type = "number";
+    setting.firstElementChild.style.width = "80px";
+    setting.firstElementChild.min="10";
+    setting.firstElementChild.max="600";
+    setting.firstElementChild.value=defaultValue;
+    setting.firstElementChild.onchange = null;
+    setting.firstElementChild.oninput = func;
     return setting
   }
 
@@ -347,7 +355,7 @@ async function settingsElement(window) {
   settingsScreen.appendChild(await createSettingOption("Quick Reply Shortcuts", "qrshortcuts", qrShortcutsSettingOnclick, defaultQrSettings()))
   //settingsScreen.appendChild(createSettingOption("Image Hover", "hover_enabled", hoverImageSettingOnclick, true))
   //settingsScreen.appendChild(createSettingOption("Small Thumbnails", "smallThumbs_enabled", smallThumbsSettingOnclick, false))
-  //settingsScreen.appendChild(await createPreferedRefreshTimeOption("Prefered Autorefresh Interval", changeRefreshInterval))
+  settingsScreen.appendChild(await createPreferedRefreshTimeOption("Prefered Autorefresh Interval"));
   //settingsScreen.appendChild(createSettingOption("Retry refreshing despite getting return code 404", "force_refresh", toggleForceReattemptRefresh, false))
   //settingsScreen.appendChild(createSettingOption("Clear spoiler after post submission", "clear_spoiler", clearSpoilerFunc, false))
   settingsScreen.appendChild(await createSettingOption("Share MyPosts between domains", "MyPosts_Shared", myPostsSharing, false))
@@ -698,6 +706,12 @@ function SetupEmbeddedCloudflare()
   }
 }
 
+async function ChangeRefreshTime() {
+  if (document.getElementsByClassName("thread noflex threadsContainer").length === 1) {
+    limitRefreshWait = Number(await GM.getValue("Settings.RefreshInterval", "600"));
+  }
+}
+
 function addMissingHandlers() {
   if (typeof(hover_addHandlers) === "function") {
     if (typeof(overlay) === "object") {
@@ -714,6 +728,7 @@ function readyFn() {
   SetKeypressOnQr();
   SetupObserver();
   SetupEmbeddedCloudflare();
+  ChangeRefreshTime();
   setIdTextColor(document.getElementsByClassName("user-id"));
   addMissingHandlers();
 }
