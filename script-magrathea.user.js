@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-magrathea-script
-// @version       0.2.7
+// @version       0.3.0
 // @namespace     endchan-magrathea-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -21,73 +21,13 @@
 let qrSettings = {};
 let keyPressMap = new Map();
 
-function styleForSettingsWindow() {
-  var style = document.createElement("style")
-  style.id = "settings_screen_style"
-  style.type = "text/css"
-  style.innerText =
-    '#settingsWindow, #qrSettingsScreen { \
-      display:none; \
-    } \
-     \
-    #settingsWindow.opened h1 { \
-      text-align:center; \
-    } \
-     \
-    #settingsWindow.opened, #qrSettingsScreen.opened { \
-      display:block; \
-      position: fixed; \
-      top: 50%; \
-      left: 50%; \
-      margin-right: -50%; \
-      transform: translate(-50%, -50%); \
-      z-index: 101; \
-      max-height:60%; \
-      padding:0em 1em 1em 1em; \
-      overflow-y: scroll; \
-      width:30em; \
-    } \
-     \
-    #qrSettingsScreen.opened { \
-      padding-top:1em; \
-      z-index: 102; \
-    } \
-     \
-    #settingsOverlay, #qrSettingsScreenOverlay { \
-      display:none; \
-    } \
-     \
-    #settingsOverlay.opened, \
-    #qrSettingsScreenOverlay.opened { \
-      display:block; \
-      position:fixed; \
-      top:0px; \
-      left:0px; \
-      width:100%; \
-      height:100%; \
-      background-color: rgba(0,0,0,0.4); \
-      z-index:100; \
-    } \
-     \
-    #qrSettingsScreenOverlay.opened { \
-      background-color: rgba(0,0,0,0); \
-    } \
-     \
-    #settingsWindow .setting, \
-    #qrSettingsScreen .setting { \
-      overflow:hidden; \
-      margin: 0 4 0 4; \
-    } \
-    #settingsWindow label, \
-    #qrSettingsScreen label { \
-      display:block; \
-    } \
-    #qrSettingsScreen .shortcut { \
-      float:right; \
-      margin-bottom:1em; \
-      width:10em; \
-    }'
-  return style
+function GetSingleThreadOrNull() {
+  let threads = document.getElementsByClassName("thread noflex threadsContainer");
+  if (threads.length === 1) {
+    return threads[0];
+  } else {
+    return null;
+  }
 }
 
 async function mergePosts() {
@@ -120,36 +60,26 @@ async function mergePosts() {
 }
 
 async function settingsElement(window) {
-  let oldXHR = window.XMLHttpRequest
-  var standardQRreplyCallback
+  var ele = document.createElement("a");
+  ele.innerText = "[script settings]";
+  let url = document.URL.split("#")[0];
+  url += "#settings";
 
-  if (window.QRreplyCallback) {
-    standardQRreplyCallback = window.QRreplyCallback
-    standardQRreplyCallback.progress = window.QRreplyCallback.progress
-    standardQRreplyCallback.stop = window.QRreplyCallback.stop
-  }
+  ele.href = url;
+  ele.style.float = "right";
+  ele.style.cursor = "pointer";
 
-  var ele = document.createElement("a")
-  ele.innerText = "[script settings]"
-  let url = document.URL.split("#")[0]
-  url += "#settings"
+  var settingsBox = document.createElement("div");
+  settingsBox.id = "settingsWindow";
+  settingsBox.style.backgroundColor = window.getComputedStyle(document.getElementsByTagName("NAV")[0]).backgroundColor;
 
-  ele.href = url
-  ele.style.float = "right"
-  ele.style.cursor = "pointer"
+  var header = document.createElement("h1");
+  header.innerText = "Settings";
+  settingsBox.appendChild(header);
+  settingsBox.appendChild(document.createElement("hr"));
 
-  var settingsBox = document.createElement("div")
-  settingsBox.id = "settingsWindow"
-  settingsBox.style.backgroundColor = window.getComputedStyle(document.getElementsByTagName("NAV")[0]).backgroundColor
-  //settingsBox.classList.add("closed")
-
-  var header = document.createElement("h1")
-  header.innerText = "Settings"
-  settingsBox.appendChild(header)
-  settingsBox.appendChild(document.createElement("hr"))
-
-  var settingsScreen = document.createElement("div")
-  settingsScreen.id = "settings"
+  var settingsScreen = document.createElement("div");
+  settingsScreen.id = "settings";
 
   async function myPostsSharing() {
     let postsShared = !JSON.parse(await GM.getValue("MyPosts_Shared", "false"));
@@ -166,7 +96,7 @@ async function settingsElement(window) {
 
     let checked = await GM.getValue(item, null);
     if (!checked) {
-      checked = typeof(defaultCheck) === "boolean" ? defaultCheck : defaultCheck.enabled
+      checked = typeof(defaultCheck) === "boolean" ? defaultCheck : defaultCheck.enabled;
       await GM.setValue(item, JSON.stringify(defaultCheck));
     } else if (checked == "false") {
       checked = false;
@@ -183,17 +113,17 @@ async function settingsElement(window) {
     } else {
       checked = JSON.parse(checked).enabled;
     }
-    input.type = "checkbox"
-    input.checked = checked
-    input.onchange = func
-    input.style.marginRight = "4px"
-    input.style.marginLeft = "4px"
-    description.innerText = text
+    input.type = "checkbox";
+    input.checked = checked;
+    input.onchange = func;
+    input.style.marginRight = "4px";
+    input.style.marginLeft = "4px";
+    description.innerText = text;
 
-    setting.appendChild(input)
-    setting.appendChild(description)
-    setting.classList.add("setting")
-    return setting
+    setting.appendChild(input);
+    setting.appendChild(description);
+    setting.classList.add("setting");
+    return setting;
   }
 
   async function createQRShortcutsSettingsScreen(qrsettingItem, defaultQrSettings) {
@@ -255,18 +185,21 @@ async function settingsElement(window) {
       return setting
     }
 
-    let b = document.createElement("button")
-    b.type = "button"
-    b.id = "qrSettingsButton"
-    b.onclick = function() {qrSettingsScreen.classList.toggle("opened"); qrSettingsScreenOverlay.classList.toggle("opened")}
-    b.innerText = "Shortcuts"
-    b.style.marginRight = "12pt"
-    b.style.float = "right"
+    let b = document.createElement("button");
+    b.type = "button";
+    b.id = "qrSettingsButton";
+    b.onclick = function() {
+      qrSettingsScreen.classList.toggle("opened");
+      qrSettingsScreenOverlay.classList.toggle("opened");
+    }
+    b.innerText = "Shortcuts";
+    b.style.marginRight = "12pt";
+    b.style.float = "right";
 
-    let qss = document.createElement("div")
-    qss.id = "qrSettingsScreen"
+    let qss = document.createElement("div");
+    qss.id = "qrSettingsScreen";
 
-    qrSettings = JSON.parse(await GM.getValue("qrshortcuts", '{"enabled":false}'))
+    qrSettings = JSON.parse(await GM.getValue("qrshortcuts", '{"enabled":false}'));
     if (qrSettings.enabled) b.style.display = "block"; else b.style.display = "none";
 
     let keys = Object.keys(qrSettings.options);
@@ -337,9 +270,9 @@ async function settingsElement(window) {
         , "meme": getSetting(false, true, false, "+", 21)
         , "autism": getSetting(false, true, false, "'", 22)
         }
-      }
+      };
 
-    return settings
+    return settings;
   }
   async function qrShortcutsSettingOnclick() {
       if (!qrSettings.enabled) {
@@ -352,13 +285,13 @@ async function settingsElement(window) {
   }
 
   //settingsScreen.appendChild(await createSettingOption("Post Inlining", "postInlining", togglePostInlining, true))
-  settingsScreen.appendChild(await createSettingOption("Quick Reply Shortcuts", "qrshortcuts", qrShortcutsSettingOnclick, defaultQrSettings()))
+  settingsScreen.appendChild(await createSettingOption("Quick Reply Shortcuts", "qrshortcuts", qrShortcutsSettingOnclick, defaultQrSettings()));
   //settingsScreen.appendChild(createSettingOption("Image Hover", "hover_enabled", hoverImageSettingOnclick, true))
   //settingsScreen.appendChild(createSettingOption("Small Thumbnails", "smallThumbs_enabled", smallThumbsSettingOnclick, false))
   settingsScreen.appendChild(await createPreferedRefreshTimeOption("Prefered Autorefresh Interval"));
   //settingsScreen.appendChild(createSettingOption("Retry refreshing despite getting return code 404", "force_refresh", toggleForceReattemptRefresh, false))
   //settingsScreen.appendChild(createSettingOption("Clear spoiler after post submission", "clear_spoiler", clearSpoilerFunc, false))
-  settingsScreen.appendChild(await createSettingOption("Share MyPosts between domains", "MyPosts_Shared", myPostsSharing, false))
+  settingsScreen.appendChild(await createSettingOption("Share MyPosts between domains", "MyPosts_Shared", myPostsSharing, false));
   //settingsScreen.appendChild(createSettingOption("Preview image in Quick Reply", "imagePreview", toggleImagePreview, true))
   //toggleForceReattemptRefresh()
   //toggleForceReattemptRefresh()
@@ -366,38 +299,111 @@ async function settingsElement(window) {
   //clearSpoilerFunc()
 
 
-  settingsBox.appendChild(settingsScreen)
-  settingsBox.style.zIndex = "100"
-  document.body.after(settingsBox)
+  settingsBox.appendChild(settingsScreen);
+  settingsBox.style.zIndex = "100";
+  document.body.after(settingsBox);
   settingsBox.after(await createQRShortcutsSettingsScreen(settingsScreen.children[0], defaultQrSettings));
 
-  let overlay = document.createElement("div")
-  overlay.id = "settingsOverlay"
-  overlay.onclick = function() {settingsWindow.classList.toggle("opened"); settingsOverlay.classList.toggle("opened");}
+  let overlay = document.createElement("div");
+  overlay.id = "settingsOverlay";
+  overlay.onclick = function() {
+    settingsWindow.classList.toggle("opened");
+    settingsOverlay.classList.toggle("opened");
+  }
 
-  settingsWindow.before(overlay)
-  let qoverlay = document.createElement("div")
-  qoverlay.id = "qrSettingsScreenOverlay"
+  settingsWindow.before(overlay);
+  let qoverlay = document.createElement("div");
+  qoverlay.id = "qrSettingsScreenOverlay";
   qoverlay.onclick = function() {qrSettingsScreen.classList.toggle("opened"); qrSettingsScreenOverlay.classList.toggle("opened");}
 
-  settingsWindow.before(qoverlay)
+  settingsWindow.before(qoverlay);
   ele.onmousedown = function(e) {
-    settingsBox.classList.toggle("opened")
-    overlay.classList.toggle("opened")
-    e.preventDefault()
-    e.stopPropagation()
+    settingsBox.classList.toggle("opened");
+    overlay.classList.toggle("opened");
+    e.preventDefault();
+    e.stopPropagation();
   }
 
 
-  return ele
+  return ele;
 }
 
 async function SetupSettingsMenuItem()
 {
   if (document.URL.includes("/user/settings")) {
+    function styleForSettingsWindow() {
+      var style = document.createElement("style")
+      style.id = "settings_screen_style"
+      style.type = "text/css"
+      style.innerText =
+        '#settingsWindow, #qrSettingsScreen { \
+          display:none; \
+        } \
+         \
+        #settingsWindow.opened h1 { \
+          text-align:center; \
+        } \
+         \
+        #settingsWindow.opened, #qrSettingsScreen.opened { \
+          display:block; \
+          position: fixed; \
+          top: 50%; \
+          left: 50%; \
+          margin-right: -50%; \
+          transform: translate(-50%, -50%); \
+          z-index: 101; \
+          max-height:60%; \
+          padding:0em 1em 1em 1em; \
+          overflow-y: scroll; \
+          width:30em; \
+        } \
+         \
+        #qrSettingsScreen.opened { \
+          padding-top:1em; \
+          z-index: 102; \
+        } \
+         \
+        #settingsOverlay, #qrSettingsScreenOverlay { \
+          display:none; \
+        } \
+         \
+        #settingsOverlay.opened, \
+        #qrSettingsScreenOverlay.opened { \
+          display:block; \
+          position:fixed; \
+          top:0px; \
+          left:0px; \
+          width:100%; \
+          height:100%; \
+          background-color: rgba(0,0,0,0.4); \
+          z-index:100; \
+        } \
+         \
+        #qrSettingsScreenOverlay.opened { \
+          background-color: rgba(0,0,0,0); \
+        } \
+         \
+        #settingsWindow .setting, \
+        #qrSettingsScreen .setting { \
+          overflow:hidden; \
+          margin: 0 4 0 4; \
+        } \
+        #settingsWindow label, \
+        #qrSettingsScreen label { \
+          display:block; \
+        } \
+        #qrSettingsScreen .shortcut { \
+          float:right; \
+          margin-bottom:1em; \
+          width:10em; \
+        }'
+      return style;
+    }
+
     if (GM) {
       var window = unsafeWindow;
     }
+
     let usersettingsTable = document.getElementsByClassName("pages")[0].firstElementChild;
     let settingsTableEntry = document.createElement("li");
     let settingsUrl = document.URL + "#settings";
@@ -418,108 +424,107 @@ function DecorateQuickReplyWithIds()
   }
 }
 
-function insertAtCaret(open, close) {
-  let qrbody = document.getElementById("GM_qrbody");
-  let startPos = qrbody.selectionStart;
-  let endPos = qrbody.selectionEnd;
-  let scrollTop = qrbody.scrollTop;
-  let marked_text = "";
-  for (let i = qrbody.selectionStart; i < qrbody.selectionEnd; i++) {
-    marked_text += qrbody.value[i]
-  }
-  qrbody.value = qrbody.value.substring(0, startPos) + open + marked_text + close + qrbody.value.substring(endPos, qrbody.value.length);
-  qrbody.focus();
-  qrbody.selectionStart = startPos + open.length;
-  qrbody.selectionEnd = startPos + open.length + marked_text.length;
-  qrbody.scrollTop = scrollTop;
-};
-
-function KeyPress(e) { //Adds quick shortcuts for markup and posting
-  var evtobj = window.event? event : e
-  let entry = (evtobj.ctrlKey ? "C" : "") + (evtobj.altKey ? "A" : "") + (evtobj.shiftKey ? "S" : "") + "_" + evtobj.key.toUpperCase();
-  let shortcut = keyPressMap.get(entry);
-  if (shortcut) {
-    switch (shortcut) {
-      case 1: //bold
-        insertAtCaret("'''","'''");
-        break;
-      case 2: //italics
-        insertAtCaret("''","''");
-        break;
-      case 3: //underline
-        insertAtCaret("__","__");
-        break;
-      case 4: //spoiler
-        insertAtCaret("**","**");
-        break;
-      case 5: //submit
-        document.getElementById("GM_qrSubmitButton").click();
-        break;
-      case 6: //strikethrough
-        insertAtCaret("~~","~~");
-        break;
-      case 7: //header
-        insertAtCaret("==","==");
-        break;
-      case 8: //codetag
-        insertAtCaret("[code]","[/code]");
-        break;
-      case 9: //close quick-reply
-        document.getElementById("GM_closeButton").click();
-        break;
-      case 10: //Japanese letters
-        insertAtCaret("[aa]","[/aa]");
-        break;
-      case 11: //White
-        insertAtCaret("~","/~");
-        break;
-      case 12: //Pink
-        insertAtCaret("!","/!");
-        break;
-      case 13: //Red
-        insertAtCaret("@","/@");
-        break;
-      case 14: //Orange
-        insertAtCaret("&","/&");
-        break;
-      case 15: //Yellow
-        insertAtCaret("+","/+");
-        break;
-      case 16: //Green
-        insertAtCaret("$","/$");
-        break;
-      case 17: //Cyan
-        insertAtCaret("?","/?");
-        break;
-      case 18: //Blue
-        insertAtCaret("#","/#");
-        break;
-      case 19: //Purple
-        insertAtCaret("%","/%");
-        break;
-      case 20: //Brown
-        insertAtCaret("^","/^");
-        break;
-      case 21: //Meme
-        insertAtCaret("[meme]","[/meme]");
-        break;
-      case 22: //Autism
-        insertAtCaret("[autism]","[/autism]");
-        break;
-
-      default: //shouldn't get here ever
-        break;
-    }
-    e.preventDefault();
-    e.stopPropagation();
-  }
-}
-
 async function SetKeypressOnQr()
 {
+  function KeyPress(e) { //Adds quick shortcuts for markup and posting
+    var evtobj = window.event? event : e;
+    let entry = (evtobj.ctrlKey ? "C" : "") + (evtobj.altKey ? "A" : "") + (evtobj.shiftKey ? "S" : "") + "_" + evtobj.key.toUpperCase();
+    let shortcut = keyPressMap.get(entry);
+    if (shortcut) {
+      function insertAtCaret(open, close) {
+        let qrbody = document.getElementById("GM_qrbody");
+        let startPos = qrbody.selectionStart;
+        let endPos = qrbody.selectionEnd;
+        let scrollTop = qrbody.scrollTop;
+        let marked_text = "";
+        for (let i = qrbody.selectionStart; i < qrbody.selectionEnd; i++) {
+          marked_text += qrbody.value[i];
+        }
+        qrbody.value = qrbody.value.substring(0, startPos) + open + marked_text + close + qrbody.value.substring(endPos, qrbody.value.length);
+        qrbody.focus();
+        qrbody.selectionStart = startPos + open.length;
+        qrbody.selectionEnd = startPos + open.length + marked_text.length;
+        qrbody.scrollTop = scrollTop;
+      };
+      switch (shortcut) {
+        case 1: //bold
+          insertAtCaret("'''","'''");
+          break;
+        case 2: //italics
+          insertAtCaret("''","''");
+          break;
+        case 3: //underline
+          insertAtCaret("__","__");
+          break;
+        case 4: //spoiler
+          insertAtCaret("**","**");
+          break;
+        case 5: //submit
+          document.getElementById("GM_qrSubmitButton").click();
+          break;
+        case 6: //strikethrough
+          insertAtCaret("~~","~~");
+          break;
+        case 7: //header
+          insertAtCaret("==","==");
+          break;
+        case 8: //codetag
+          insertAtCaret("[code]","[/code]");
+          break;
+        case 9: //close quick-reply
+          document.getElementById("GM_closeButton").click();
+          break;
+        case 10: //Japanese letters
+          insertAtCaret("[aa]","[/aa]");
+          break;
+        case 11: //White
+          insertAtCaret("~","/~");
+          break;
+        case 12: //Pink
+          insertAtCaret("!","/!");
+          break;
+        case 13: //Red
+          insertAtCaret("@","/@");
+          break;
+        case 14: //Orange
+          insertAtCaret("&","/&");
+          break;
+        case 15: //Yellow
+          insertAtCaret("+","/+");
+          break;
+        case 16: //Green
+          insertAtCaret("$","/$");
+          break;
+        case 17: //Cyan
+          insertAtCaret("?","/?");
+          break;
+        case 18: //Blue
+          insertAtCaret("#","/#");
+          break;
+        case 19: //Purple
+          insertAtCaret("%","/%");
+          break;
+        case 20: //Brown
+          insertAtCaret("^","/^");
+          break;
+        case 21: //Meme
+          insertAtCaret("[meme]","[/meme]");
+          break;
+        case 22: //Autism
+          insertAtCaret("[autism]","[/autism]");
+          break;
+
+        default: //shouldn't get here ever
+          break;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+
   let qr = document.getElementById("postform");
   if (qr) {
-    let qrSettings = JSON.parse(await GM.getValue("qrshortcuts", '{"enabled":false}'))
+    let qrSettings = JSON.parse(await GM.getValue("qrshortcuts", '{"enabled":false}'));
     if (qrSettings.enabled) {
       Object.keys(qrSettings.options).forEach(settingName => {
         let option = qrSettings.options[settingName];
@@ -551,7 +556,7 @@ async function namefield() {
         await GM.setValue("Settings.Name", qrNameField.value);
         localStorage.name = qrNameField.value;
       }
-      qrNameField.autocomplete = "on"
+      qrNameField.autocomplete = "on";
     }
     namefield.oninput = async function() {
       await GM.setValue("Settings.Name", namefield.value);
@@ -578,62 +583,62 @@ function setIdTextColor(eles) {
   }
 }
 
-function updateQuotes(node) {
-  let eles = node.getElementsByClassName("quote");
-  let nodePostId = node.id;
-  let board = node.attributes.getNamedItem("data-board").value;
-  let thread = document.getElementsByClassName("post-container op")[0].id;
-  let constructedUrlPart = "/" + board + "/thread/" + thread + ".html#";
-  let constructedUrl = constructedUrlPart + nodePostId;
-  let innerText = ">>/" + nodePostId + "/";
-  for (let i = 0; i < eles.length; i++) {
-    let splitPostParts = eles[i].innerText.split("/");
-    if (splitPostParts.length === 3) {
-      let quotedPostId = Number(splitPostParts[1]);
-      if (quotedPostId > 0) {
-        let post = document.getElementById(quotedPostId);
-        let yous = JSON.parse(localStorage.yous);
-        let quotedPostNumber = board + "-" + quotedPostId
-        if (yous.includes(quotedPostNumber)) {
-          eles[i].classList.add("you");
-        }
-        let backlinkRepliesElements = post.getElementsByClassName("replies mt-5 ml-5");
-        if (backlinkRepliesElements.length > 0) {
-          let backlinkRepliesElement = backlinkRepliesElements[0];
-          let backlinkDoesNotExist = true;
-          for (let j = 0; j < backlinkRepliesElement.childNodes.length; j++) {
-            if (backlinkRepliesElement.childNodes[j].innerText === innerText) {
-              backlinkDoesNotExist = false;
-              break;
-            }
+function SetupObserver()
+{
+  function updateQuotes(node) {
+    let eles = node.getElementsByClassName("quote");
+    let nodePostId = node.id;
+    let board = node.attributes.getNamedItem("data-board").value;
+    let thread = document.getElementsByClassName("post-container op")[0].id;
+    let constructedUrlPart = "/" + board + "/thread/" + thread + ".html#";
+    let constructedUrl = constructedUrlPart + nodePostId;
+    let innerText = ">>/" + nodePostId + "/";
+    for (let i = 0; i < eles.length; i++) {
+      let splitPostParts = eles[i].innerText.split("/");
+      if (splitPostParts.length === 3) {
+        let quotedPostId = Number(splitPostParts[1]);
+        if (quotedPostId > 0) {
+          let post = document.getElementById(quotedPostId);
+          let yous = JSON.parse(localStorage.yous);
+          let quotedPostNumber = board + "-" + quotedPostId;
+          if (yous.includes(quotedPostNumber)) {
+            eles[i].classList.add("you");
           }
-          if (backlinkDoesNotExist) {
-            let backlink = document.createElement("a");
-            backlink.classList.add("quote");
-            backlink.href = constructedUrl;
-            backlink.innerText = innerText;
-            let span = document.createElement("span");
-            span.appendChild(backlink);
-            backlinkRepliesElement.appendChild(span);
+          let backlinkRepliesElements = post.getElementsByClassName("replies mt-5 ml-5");
+          if (backlinkRepliesElements.length > 0) {
+            let backlinkRepliesElement = backlinkRepliesElements[0];
+            let backlinkDoesNotExist = true;
+            for (let j = 0; j < backlinkRepliesElement.childNodes.length; j++) {
+              if (backlinkRepliesElement.childNodes[j].innerText === innerText) {
+                backlinkDoesNotExist = false;
+                break;
+              }
+            }
+            if (backlinkDoesNotExist) {
+              let backlink = document.createElement("a");
+              backlink.classList.add("quote");
+              backlink.href = constructedUrl;
+              backlink.innerText = innerText;
+              let span = document.createElement("span");
+              span.appendChild(backlink);
+              backlinkRepliesElement.appendChild(span);
+            }
           }
         }
       }
     }
   }
-}
 
-function wrapNode(node) {
-  let wrapper = document.createElement("div");
-  wrapper.style.display = "inline-block";
-  wrapper.style.maxWidth = "94%";
-  wrapper.setAttribute("data-types", "post reply");
-  node.parentElement.replaceChild(wrapper, node);
-  wrapper.appendChild(node);
-  wrapper.after(document.createElement("br"));
-}
+  function wrapNode(node) {
+    let wrapper = document.createElement("div");
+    wrapper.style.display = "inline-block";
+    wrapper.style.maxWidth = "94%";
+    wrapper.setAttribute("data-types", "post reply");
+    node.parentElement.replaceChild(wrapper, node);
+    wrapper.appendChild(node);
+    wrapper.after(document.createElement("br"));
+  }
 
-function SetupObserver()
-{
   const updateNewPosts = function(list, observer) {
     for(let mutation of list) {
       if (mutation.type === 'childList') {
@@ -647,21 +652,20 @@ function SetupObserver()
       }
     }
   }
-  let threads = document.getElementsByClassName("thread noflex threadsContainer");
-  if (threads.length === 1) {
+  let thread = GetSingleThreadOrNull();
+  if (thread) {
     observer = new MutationObserver(updateNewPosts);
-    observer.observe(threads[0], {childList:true}); // element to observe for changes, and conf
+    observer.observe(thread, {childList:true}); // element to observe for changes, and conf
   }
 }
 
-function SetupEmbeddedCloudflare()
-{
-  let threads = document.getElementsByClassName("thread noflex threadsContainer");
-  if (threads.length === 1) {
-    let thread = document.getElementsByClassName("post-container op")[0];
+function SetupEmbeddedCloudflare() {
+  let thread = GetSingleThreadOrNull();
+  if (thread) {
+    thread = thread.getElementsByClassName("post-container op")[0];
     let threadId = thread.id;
     let board = thread.attributes.getNamedItem("data-board").value;
-    let embedded = document.createElement("iframe")
+    let embedded = document.createElement("iframe");
     embedded.id = "GM_embeddedPage";
     embedded.type = "text/html";
     embedded.src = document.URL.split(board)[0];
@@ -685,7 +689,7 @@ function SetupEmbeddedCloudflare()
     document.getElementById("livetext").after(div);
 
     if (GM) {
-      var window = unsafeWindow
+      var window = unsafeWindow;
     }
 
     let oldFetch = window.fetch;
@@ -707,7 +711,7 @@ function SetupEmbeddedCloudflare()
 }
 
 async function ChangeRefreshTime() {
-  if (document.getElementsByClassName("thread noflex threadsContainer").length === 1) {
+  if (GetSingleThreadOrNull()) {
     limitRefreshWait = Number(await GM.getValue("Settings.RefreshInterval", "600"));
   }
 }
@@ -720,17 +724,18 @@ function addMissingHandlers() {
   }
 }
 
-function readyFn() {
+async function readyFn() {
   console.log("Running script");
-  SetupSettingsMenuItem();
+  await SetupSettingsMenuItem();
   DecorateQuickReplyWithIds();
-  namefield();
-  SetKeypressOnQr();
+  await namefield();
+  await SetKeypressOnQr();
   SetupObserver();
   SetupEmbeddedCloudflare();
-  ChangeRefreshTime();
+  await ChangeRefreshTime();
   setIdTextColor(document.getElementsByClassName("user-id"));
   addMissingHandlers();
+  console.log("script finished executed");
 }
 
-readyFn();
+return readyFn();
