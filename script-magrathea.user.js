@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-magrathea-script
-// @version       0.2.5
+// @version       0.2.6
 // @namespace     endchan-magrathea-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -698,6 +698,14 @@ function SetupEmbeddedCloudflare()
   }
 }
 
+function addMissingHandlers() {
+  if (typeof(hover_addHandlers) === "function") {
+    if (typeof(overlay) === "object") {
+      hover_addHandlers(overlay);
+    }
+  }
+}
+
 function readyFn() {
   console.log("Running script");
   SetupSettingsMenuItem();
@@ -707,6 +715,7 @@ function readyFn() {
   SetupObserver();
   SetupEmbeddedCloudflare();
   setIdTextColor(document.getElementsByClassName("user-id"));
+  addMissingHandlers();
 }
 
 readyFn();
