@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-magrathea-script
-// @version       0.3.2
+// @version       0.3.3
 // @namespace     endchan-magrathea-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -623,40 +623,43 @@ function SetupObserver()
     let eles = node.getElementsByClassName("quote");
     let nodePostId = node.id;
     let board = node.attributes.getNamedItem("data-board").value;
-    let thread = document.getElementsByClassName("post-container op")[0].id;
-    let constructedUrlPart = "/" + board + "/thread/" + thread + ".html#";
-    let constructedUrl = constructedUrlPart + nodePostId;
-    let innerText = ">>/" + nodePostId + "/";
-    for (let i = 0; i < eles.length; i++) {
-      let splitPostParts = eles[i].innerText.split("/");
-      if (splitPostParts.length === 3) {
-        let quotedPostId = Number(splitPostParts[1]);
-        if (quotedPostId > 0) {
-          let post = document.getElementById(quotedPostId);
-          let yous = JSON.parse(localStorage.yous);
-          let quotedPostNumber = board + "-" + quotedPostId;
-          if (yous.includes(quotedPostNumber)) {
-            eles[i].classList.add("you");
-          }
-          if (post) {
-            let backlinkRepliesElements = post.getElementsByClassName("replies mt-5 ml-5");
-            if (backlinkRepliesElements.length > 0) {
-              let backlinkRepliesElement = backlinkRepliesElements[0];
-              let backlinkDoesNotExist = true;
-              for (let j = 0; j < backlinkRepliesElement.childNodes.length; j++) {
-                if (backlinkRepliesElement.childNodes[j].innerText === innerText) {
-                  backlinkDoesNotExist = false;
-                  break;
+    let thread = GetSingleThreadOrNull();
+    if (thread) { 
+      let threadNumber = thread.previousElementSibling.previousElementSibling.value
+      let constructedUrlPart = "/" + board + "/thread/" + threadNumber + ".html#";
+      let constructedUrl = constructedUrlPart + nodePostId;
+      let innerText = ">>/" + nodePostId + "/";
+      for (let i = 0; i < eles.length; i++) {
+        let splitPostParts = eles[i].innerText.split("/");
+        if (splitPostParts.length === 3) {
+          let quotedPostId = Number(splitPostParts[1]);
+          if (quotedPostId > 0) {
+            let post = document.getElementById(quotedPostId);
+            let yous = JSON.parse(localStorage.yous);
+            let quotedPostNumber = board + "-" + quotedPostId;
+            if (yous.includes(quotedPostNumber)) {
+              eles[i].classList.add("you");
+            }
+            if (post) {
+              let backlinkRepliesElements = post.getElementsByClassName("replies mt-5 ml-5");
+              if (backlinkRepliesElements.length > 0) {
+                let backlinkRepliesElement = backlinkRepliesElements[0];
+                let backlinkDoesNotExist = true;
+                for (let j = 0; j < backlinkRepliesElement.childNodes.length; j++) {
+                  if (backlinkRepliesElement.childNodes[j].innerText === innerText) {
+                    backlinkDoesNotExist = false;
+                    break;
+                  }
                 }
-              }
-              if (backlinkDoesNotExist) {
-                let backlink = document.createElement("a");
-                backlink.classList.add("quote");
-                backlink.href = constructedUrl;
-                backlink.innerText = innerText;
-                let span = document.createElement("span");
-                span.appendChild(backlink);
-                backlinkRepliesElement.appendChild(span);
+                if (backlinkDoesNotExist) {
+                  let backlink = document.createElement("a");
+                  backlink.classList.add("quote");
+                  backlink.href = constructedUrl;
+                  backlink.innerText = innerText;
+                  let span = document.createElement("span");
+                  span.appendChild(backlink);
+                  backlinkRepliesElement.appendChild(span);
+                }
               }
             }
           }
