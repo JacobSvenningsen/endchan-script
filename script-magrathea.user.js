@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-magrathea-script
-// @version       0.3.0
+// @version       0.3.1
 // @namespace     endchan-magrathea-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -724,6 +724,72 @@ function addMissingHandlers() {
   }
 }
 
+function supportPostEmbedding() {
+  function removeTextFromNode(node) {
+    if (node) {
+      let childnodes = node.childNodes;
+      let length = childnodes.length;
+      while (length-->0) {
+        if (childnodes[length].nodeType === 3) {
+          if (childnodes[length].nodeValue.replaceAll(" ", "").split("\n").length > 1) {
+            childnodes[length].remove();
+          }
+        }
+      }
+    }
+  }
+  function addHoveringHandlers(node) {
+    let eles = node.getElementsByClassName('post-file');
+    for (let i = 0; i < eles.length; i++) {
+      let elem = eles[i];
+      elem.classList.remove("useViewer");
+      let info = getViewerInfoFromElem(elem.querySelector(".post-file-info"));
+      hover_addHandler(info, elem, overlay);
+    }
+  }
+  function addEmbeddingOnClick(node) {
+    let allQuotes = node.getElementsByClassName("quote format_full");
+    for (let i = 0; i < allQuotes.length; i++) {
+      let quoteText = allQuotes[i].innerText;
+      if (quoteText.startsWith(">>/")) {
+        allQuotes[i].onclick = function(e) {
+          let quotedPost = document.getElementById("float");
+          if (quotedPost) {
+            let clonedNodeId = "cloned_" + quotedPost.firstElementChild.id;
+            let clonedNode = document.getElementById(clonedNodeId);
+            if (clonedNode) {
+              clonedNode.remove();
+              this.nextElementSibling.remove();
+            } else {
+              let cloned = quotedPost.cloneNode(true);
+              cloned.id = clonedNodeId;
+              cloned.firstElementChild.id = ""; //article
+              removeTextFromNode(cloned.firstElementChild);
+              removeTextFromNode(cloned.firstElementChild.getElementsByClassName("post-data")[0]);
+              addHoveringHandlers(cloned);
+              removeTextFromNode(cloned.firstElementChild.getElementsByClassName("post-file-info")[0]);
+              cloned.style.borderWidth = "thin";
+              cloned.style.borderStyle = "solid";
+              cloned.style.display = "inline-block";
+              let postInfo = cloned.getElementsByClassName("post-info")[0];
+              postInfo.style.whiteSpace = "normal";
+              addEmbeddingOnClick(cloned);
+              this.after(cloned);
+              this.after(document.createElement("br"));
+            }
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        };
+      }
+    }
+  }
+  let thread = GetSingleThreadOrNull();
+  if (thread) {
+    addEmbeddingOnClick(document);
+  }
+}
+
 async function readyFn() {
   console.log("Running script");
   await SetupSettingsMenuItem();
@@ -735,6 +801,7 @@ async function readyFn() {
   await ChangeRefreshTime();
   setIdTextColor(document.getElementsByClassName("user-id"));
   addMissingHandlers();
+  supportPostEmbedding();
   console.log("script finished executed");
 }
 
