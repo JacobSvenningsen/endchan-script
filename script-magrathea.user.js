@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-magrathea-script
-// @version       0.3.0
+// @version       0.3.1
 // @namespace     endchan-magrathea-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -87,6 +87,11 @@ async function settingsElement(window) {
       await mergePosts();
     }
     await GM.setValue("MyPosts_Shared", postsShared.toString());
+  }
+
+  async function hideAnonPosts() {
+    let anonHidden = !JSON.parse(await GM.getValue("HideAnon", "false"));
+    await GM.setValue("HideAnon", anonHidden.toString());
   }
 
   async function createSettingOption(text, item, func, defaultCheck) {
@@ -292,6 +297,7 @@ async function settingsElement(window) {
   //settingsScreen.appendChild(createSettingOption("Retry refreshing despite getting return code 404", "force_refresh", toggleForceReattemptRefresh, false))
   //settingsScreen.appendChild(createSettingOption("Clear spoiler after post submission", "clear_spoiler", clearSpoilerFunc, false))
   settingsScreen.appendChild(await createSettingOption("Share MyPosts between domains", "MyPosts_Shared", myPostsSharing, false));
+  settingsScreen.appendChild(await createSettingOption("Hide Anonymous by default", "HideAnon", hideAnonPosts, false));
   //settingsScreen.appendChild(createSettingOption("Preview image in Quick Reply", "imagePreview", toggleImagePreview, true))
   //toggleForceReattemptRefresh()
   //toggleForceReattemptRefresh()
@@ -565,6 +571,34 @@ async function namefield() {
   }
 }
 
+async function hideAnonIfEnabled(node) {
+  if (JSON.parse(await GM.getValue("HideAnon", "false"))) {
+    if (node) {
+      let posts = node.getElementsByClassName("post-container");
+      for (let i = 0; i < posts.length; i++) {
+        let posterName = posts[i].attributes.getNamedItem("data-name");
+        if (posterName && posterName.value === "Anonymous") {
+          let parent = posts[i].parentElement;
+          let hiddenElement = document.createElement("div");
+          let text = "[Show hidden post " + posts[i].id + "]";
+          let innerElement = document.createElement("a");
+          innerElement.innerText = text;
+          innerElement.onclick = function() {
+            this.parentElement.nextElementSibling.style.display = "inline-block";
+            this.parentElement.before(document.createElement("br"));
+            this.parentElement.remove();
+          }
+          hiddenElement.appendChild(innerElement);
+          hiddenElement.classList.add("hiddenPost");
+          parent.previousSibling.remove();
+          parent.before(hiddenElement);
+          parent.style.display = "none";
+        }
+      }
+    }
+  }
+}
+
 function setIdTextColor(eles) {
   for (let i = 0; i < eles.length; i++) {
     let colorAsHex = eles[i].innerText;
@@ -647,6 +681,7 @@ function SetupObserver()
             setIdTextColor(node.getElementsByClassName("user-id"));
             updateQuotes(node);
             wrapNode(node);
+            hideAnonIfEnabled(node.parentElement);
           }
         })
       }
@@ -735,6 +770,7 @@ async function readyFn() {
   await ChangeRefreshTime();
   setIdTextColor(document.getElementsByClassName("user-id"));
   addMissingHandlers();
+  await hideAnonIfEnabled(GetSingleThreadOrNull());
   console.log("script finished executed");
 }
 
