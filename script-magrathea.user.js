@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-magrathea-script
-// @version       0.3.1
+// @version       0.3.2
 // @namespace     endchan-magrathea-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -638,24 +638,26 @@ function SetupObserver()
           if (yous.includes(quotedPostNumber)) {
             eles[i].classList.add("you");
           }
-          let backlinkRepliesElements = post.getElementsByClassName("replies mt-5 ml-5");
-          if (backlinkRepliesElements.length > 0) {
-            let backlinkRepliesElement = backlinkRepliesElements[0];
-            let backlinkDoesNotExist = true;
-            for (let j = 0; j < backlinkRepliesElement.childNodes.length; j++) {
-              if (backlinkRepliesElement.childNodes[j].innerText === innerText) {
-                backlinkDoesNotExist = false;
-                break;
+          if (post) {
+            let backlinkRepliesElements = post.getElementsByClassName("replies mt-5 ml-5");
+            if (backlinkRepliesElements.length > 0) {
+              let backlinkRepliesElement = backlinkRepliesElements[0];
+              let backlinkDoesNotExist = true;
+              for (let j = 0; j < backlinkRepliesElement.childNodes.length; j++) {
+                if (backlinkRepliesElement.childNodes[j].innerText === innerText) {
+                  backlinkDoesNotExist = false;
+                  break;
+                }
               }
-            }
-            if (backlinkDoesNotExist) {
-              let backlink = document.createElement("a");
-              backlink.classList.add("quote");
-              backlink.href = constructedUrl;
-              backlink.innerText = innerText;
-              let span = document.createElement("span");
-              span.appendChild(backlink);
-              backlinkRepliesElement.appendChild(span);
+              if (backlinkDoesNotExist) {
+                let backlink = document.createElement("a");
+                backlink.classList.add("quote");
+                backlink.href = constructedUrl;
+                backlink.innerText = innerText;
+                let span = document.createElement("span");
+                span.appendChild(backlink);
+                backlinkRepliesElement.appendChild(span);
+              }
             }
           }
         }
