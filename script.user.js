@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-script
-// @version       1.5.6
+// @version       1.5.7
 // @namespace     endchan-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -462,6 +462,11 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
     }
   }
 
+  function toggleSpamPrevention() {
+    let value = !JSON.parse(localStorage.getItem("SpamPrevention"));
+    localStorage.setItem("SpamPrevention", value.toString());
+  }
+
   function createSettingOption(text, item, func, defaultCheck) {
     let setting = document.createElement("label")
     let input = document.createElement("input")
@@ -661,6 +666,8 @@ function settingsElement(applyHoverImgEvent, window, updateAllLinks) {
   settingsScreen.appendChild(createSettingOption("Clear spoiler after post submission", "clear_spoiler", clearSpoilerFunc, false))
   settingsScreen.appendChild(createSettingOption("Share MyPosts between domains", "MyPosts_Shared", myPostsSharing, false))
   settingsScreen.appendChild(createSettingOption("Preview image in Quick Reply", "imagePreview", toggleImagePreview, true))
+  settingsScreen.appendChild(createSettingOption("Spam prevention", "SpamPrevention", toggleSpamPrevention, false))
+
   toggleForceReattemptRefresh()
   toggleForceReattemptRefresh()
   clearSpoilerFunc()
@@ -708,6 +715,9 @@ function namefield(window) {
     }
   }
 }
+
+var markedOnePosts = [0,0,0];
+var markedOnePostsIndex = 0;
 
 function readyFn() {
 
@@ -768,6 +778,73 @@ function readyFn() {
     window.handleConnectionResponse = newConnectionResponse;
   }
 
+  function highlightMarkedPosts() {
+    let eles = document.getElementsByClassName("deletionCheckBox");
+    document.getElementById("1_marker").click();
+    if (markedOnePostsIndex == 0) {
+      if (markedOnePosts[0] === 0) {
+        console.log("no (1) posts");
+      } else {
+        console.log("counter increased to 1. Marked posts:", markedOnePosts[0]);
+        markedOnePostsIndex++;
+      }
+    } else if (markedOnePostsIndex == 1) {
+      if (markedOnePosts[1] > markedOnePosts[0]) {
+        console.log("counter increased to 2. Marked posts:", markedOnePosts[0], markedOnePosts[1]);
+        markedOnePostsIndex++;
+      } else {
+        console.log("counter decreased to 0 due to same amount of posts");
+        markedOnePostsIndex = 0;
+        markedOnePosts[2] = markedOnePosts[1] = markedOnePosts[0] = 0;
+        for(let i = 0; i < eles.length; i++) {
+          if (eles[i].checked) {
+            eles[i].click();
+          }
+        }
+      }
+    } else if (markedOnePostsIndex == 2 && markedOnePosts[2] === markedOnePosts[1]) {
+      console.log("marked posts 2 and 1 are the same, set to 0", markedOnePosts[0], markedOnePosts[1], markedOnePosts[2]);
+      markedOnePostsIndex = 0;
+      markedOnePosts[2] = markedOnePosts[1] = markedOnePosts[0] = 0;
+      for(let i = 0; i < eles.length; i++) {
+        if (eles[i].checked) {
+          eles[i].click();
+        }
+      }
+    } else {
+      console.log("Continously increasing (1) posts. Deleting...", markedOnePosts[0], markedOnePosts[1], markedOnePosts[2]);
+      let objList = new Map();
+      for (let i = 0; i < eles.length; i++) {
+        if (eles[i].checked) {
+          let markedId = eles[i].parentElement.getElementsByClassName("labelId")[0].innerText.split(" ")[0];
+          if (objList.has(markedId)) {
+            if (objList[markedId].checked) {
+              objList[markedId].click();
+            }
+            eles[i].click();
+          } else {
+            objList.set(markedId, eles[i]);
+          }
+        }
+      }
+      let selectedContent = getSelectedContent();
+      let contentLength = selectedContent.length;
+      apiRequest('deleteContent', {
+        password : "",
+        deleteMedia : document.getElementById('checkboxMediaDeletion').checked,
+        deleteUploads : document.getElementById('checkboxOnlyFiles').checked,
+        postings : selectedContent
+      }, (s, r) => {
+        if (s === 'ok') {
+          console.log("deleted ", contentLength, " elements");
+          window.location.pathname = window.location.pathname;
+        } else {
+          markedOnePostsIndex = 1;
+        }
+      });
+    }
+  }
+
   if (typeof(refreshPosts) === "function") {
 
     let oldRefreshPosts = refreshPosts
@@ -775,13 +852,19 @@ function readyFn() {
     function newRefreshPosts(manual) {
       let newRefreshInterval = refreshTimer
       while (oldRefreshInterval <= newRefreshInterval) {clearInterval(oldRefreshInterval++)}
-      oldRefreshPosts(manual)
+      oldRefreshPosts(manual);
+      if (JSON.parse(localStorage.getItem("SpamPrevention"))) {
+        setTimeout(highlightMarkedPosts, 1000);
+      }
     }
     window.refreshPosts = newRefreshPosts
   }
 
   if(typeof refreshTimer !== "undefined") {
     window.limitRefreshWait = parseInt(localStorage.getItem("refreshInterval"))
+  }
+  if (document.body.firstElementChild == null) {
+    window.location.pathname = window.location.pathname;
   }
   document.body.firstElementChild.appendChild(settingsElement(applyHoverImgEvent, window, updateAllLinks))
   if (window.show_quick_reply && document.getElementById("threadIdentifier")) {
@@ -1433,4 +1516,26 @@ function extraStyles() {
   console.log("Done truncating posts");
 
   readyFn();
+
+  let markButton = document.createElement("BUTTON");
+  markButton.id = "1_marker";
+  markButton.type = "button";
+  markButton.innerText="Mark (1) posts"
+  markButton.onclick = function() {
+    let eles = document.getElementsByClassName("deletionCheckBox");
+    for (let i = 0; i < eles.length; i++) {
+      let postIds = eles[i].parentElement.getElementsByClassName("labelId");
+      if (postIds.length === 1 && postIds[0].innerText.includes("(1)")) {
+        let postersName = eles[i].parentElement.getElementsByClassName("linkName");
+        if (postersName.length === 1 && postersName[0].innerText === "Anonymous") {
+          markedOnePosts[markedOnePostsIndex] += 1;
+          if (!eles[i].checked) {
+            eles[i].click();
+          }
+        }
+      }
+    }
+  };
+  document.getElementsByClassName("bottomNav")[0].appendChild(markButton);
+
 }).call();
