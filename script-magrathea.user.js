@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-magrathea-script
-// @version       0.3.3
+// @version       0.3.4
 // @namespace     endchan-magrathea-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -427,6 +427,9 @@ function DecorateQuickReplyWithIds()
     qr.message.id = "GM_qrbody";
     qr.lastElementChild.id = "GM_qrSubmitButton";
     qr.getElementsByClassName("close")[0].id = "GM_closeButton";
+    if (qr.flag) {
+      qr.flag.id =  "GM_qrFlagSelector";
+    }
   }
 }
 
@@ -571,6 +574,38 @@ async function namefield() {
   }
 }
 
+async function flagField(boardname) {
+  let postform = document.getElementById("bottom_postform");
+
+  if (boardname && postform && postform.flag) {
+    let key = "Settings.Flags." + boardname;
+    let boardFlagEntry = Number(await GM.getValue(key, "0"));
+    boardFlagEntry = boardFlagEntry >= postform.flag.length ? 0 : boardFlagEntry;
+    let qr = document.getElementById("postform");
+    postform.flag.selectedIndex = boardFlagEntry;
+    if (qr) {
+      qr.flag.selectedIndex = boardFlagEntry;
+      qr.flag.oninput = async function() {
+        await GM.setValue(key, qr.flag.selectedIndex.toString());
+      }
+
+      qr.oldreset = qr.reset;
+      qr.reset = async function() {
+        this.oldreset();
+        this.flag.selectedIndex = await GM.getValue(key, "0");
+      }
+    }
+    postform.flag.oninput = async function() {
+      await GM.setValue(key, postform.flag.selectedIndex.toString());
+    }
+    postform.oldreset = postform.reset;
+    postform.reset = async function() {
+      this.oldreset();
+      this.flag.selectedIndex = await GM.getValue(key, "0");
+    }
+  }
+}
+
 async function hideAnonIfEnabled(node) {
   if (JSON.parse(await GM.getValue("HideAnon", "false"))) {
     if (node) {
@@ -624,7 +659,7 @@ function SetupObserver()
     let nodePostId = node.id;
     let board = node.attributes.getNamedItem("data-board").value;
     let thread = GetSingleThreadOrNull();
-    if (thread) { 
+    if (thread) {
       let threadNumber = thread.previousElementSibling.previousElementSibling.value
       let constructedUrlPart = "/" + board + "/thread/" + threadNumber + ".html#";
       let constructedUrl = constructedUrlPart + nodePostId;
@@ -769,6 +804,7 @@ async function readyFn() {
   await SetupSettingsMenuItem();
   DecorateQuickReplyWithIds();
   await namefield();
+  await flagField(document.querySelector(".board-title")?.innerText.split("/")[1])
   await SetKeypressOnQr();
   SetupObserver();
   SetupEmbeddedCloudflare();
