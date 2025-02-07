@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-magrathea-script
-// @version       0.3.4
+// @version       0.3.5
 // @namespace     endchan-magrathea-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -654,16 +654,15 @@ function setIdTextColor(eles) {
 
 function SetupObserver()
 {
-  function updateQuotes(node) {
+  function updateQuotes(node, thread) {
     let eles = node.getElementsByClassName("quote");
     let nodePostId = node.id;
     let board = node.attributes.getNamedItem("data-board").value;
-    let thread = GetSingleThreadOrNull();
     if (thread) {
       let threadNumber = thread.previousElementSibling.previousElementSibling.value
       let constructedUrlPart = "/" + board + "/thread/" + threadNumber + ".html#";
       let constructedUrl = constructedUrlPart + nodePostId;
-      let innerText = ">>/" + nodePostId + "/";
+      let innerText = ">>" + nodePostId + "";
       for (let i = 0; i < eles.length; i++) {
         let splitPostParts = eles[i].innerText.split("/");
         if (splitPostParts.length === 3) {
@@ -679,9 +678,10 @@ function SetupObserver()
               let backlinkRepliesElements = post.getElementsByClassName("replies mt-5 ml-5");
               if (backlinkRepliesElements.length > 0) {
                 let backlinkRepliesElement = backlinkRepliesElements[0];
+                let backlinkReplies = backlinkRepliesElement.getElementsByClassName("quote");
                 let backlinkDoesNotExist = true;
-                for (let j = 0; j < backlinkRepliesElement.childNodes.length; j++) {
-                  if (backlinkRepliesElement.childNodes[j].innerText === innerText) {
+                for (let j = 0; j < backlinkReplies.length; j++) {
+                  if (backlinkReplies[j].innerText == innerText) {
                     backlinkDoesNotExist = false;
                     break;
                   }
@@ -692,6 +692,7 @@ function SetupObserver()
                   backlink.href = constructedUrl;
                   backlink.innerText = innerText;
                   let span = document.createElement("span");
+                  span.appendChild(document.createTextNode(" "));
                   span.appendChild(backlink);
                   backlinkRepliesElement.appendChild(span);
                 }
@@ -713,13 +714,13 @@ function SetupObserver()
     wrapper.after(document.createElement("br"));
   }
 
-  const updateNewPosts = function(list, observer) {
+  const updateNewPosts = function(list, observer, thread) {
     for(let mutation of list) {
       if (mutation.type === 'childList') {
         mutation.addedNodes.forEach(function(node) {
           if (node.nodeName === "ARTICLE" && node.id !== "appendedNode") {
             setIdTextColor(node.getElementsByClassName("user-id"));
-            updateQuotes(node);
+            updateQuotes(node, thread);
             wrapNode(node);
             hideAnonIfEnabled(node.parentElement);
           }
@@ -729,8 +730,16 @@ function SetupObserver()
   }
   let thread = GetSingleThreadOrNull();
   if (thread) {
-    observer = new MutationObserver(updateNewPosts);
+    observer = new MutationObserver((l, o) => { updateNewPosts(l, o, thread); });
     observer.observe(thread, {childList:true}); // element to observe for changes, and conf
+    setTimeout(function() {
+      document.querySelectorAll(".replies.mt-5.ml-5").forEach(e => e.childNodes.forEach(e => e.remove()));
+      document.querySelectorAll(".post-container").forEach(e => {
+        if (e.nodeName === "ARTICLE") {
+          updateQuotes(e, thread);
+        }
+      });
+    }, 2000);
   }
 }
 
