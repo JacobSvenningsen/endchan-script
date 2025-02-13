@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-magrathea-script
-// @version       0.4.0
+// @version       0.4.1
 // @namespace     endchan-magrathea-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -653,7 +653,7 @@ async function hideAnonIfEnabled(node) {
         let files = posts[i].querySelectorAll(".filename");
         let nameIsGibberish = posterName && posterName.value.length > 5 && isGibberish(posterName.value, 3.0, 40);
         let filesThatAreGibberish = files.values().filter(e => { let splitTitle = e.title.split("."); let titleLength = e.title.length - 1 - splitTitle[splitTitle.length-1].length; return isGibberish(e.title.slice(9, titleLength), 3.0, 30); });
-        let idIsOne = node.querySelector(".user-id")?.attributes["data-count"].value == " (1)";
+        let idIsOne = posts[0].querySelector(".user-id")?.attributes["data-count"].value == " (1)";
         let conditionsMet = 0;
         if (idIsOne) conditionsMet++;
         if (nameIsGibberish) conditionsMet++;
@@ -725,6 +725,10 @@ function updateNumberOfPostsByIds(userIds, callback) {
   });
 }
 
+const updateIdCountersForUserIds = function(uids) {
+  uids.values().flatMap(e => postsByIdsMap.get(e)).forEach(uid => { uid.updateIdCounter(idsCounterMap.get(uid.innerText)); });
+}
+
 function SetupObserver()
 {
   function updateQuotes(node, thread) {
@@ -785,10 +789,6 @@ function SetupObserver()
     node.parentElement.replaceChild(wrapper, node);
     wrapper.appendChild(node);
     wrapper.after(document.createElement("br"));
-  }
-
-  const updateIdCountersForUserIds = function(uids) {
-    uids.values().flatMap(e => postsByIdsMap.get(e)).forEach(uid => { uid.updateIdCounter(idsCounterMap.get(uid.innerText)); });
   }
 
   const updateNewPosts = function(list, observer, thread) {
@@ -905,6 +905,7 @@ async function readyFn() {
   assignIdUpdaterFunction(document.querySelectorAll(".user-id"));
   updateNumberOfPostsByIds(document.querySelectorAll(".user-id"), function(e) {} );
   addMissingHandlers();
+  updateIdCountersForUserIds(document.querySelectorAll(".user-id").values().map(e => e.innerText).toArray())
   await hideAnonIfEnabled(GetSingleThreadOrNull());
   console.log("script finished executed");
 }
