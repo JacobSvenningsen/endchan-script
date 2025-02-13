@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-magrathea-script
-// @version       0.3.5
+// @version       0.4.0
 // @namespace     endchan-magrathea-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -20,6 +20,8 @@
 
 let qrSettings = {};
 let keyPressMap = new Map();
+let idsCounterMap = new Map();
+let postsByIdsMap = new Map();
 
 function GetSingleThreadOrNull() {
   let threads = document.getElementsByClassName("thread noflex threadsContainer");
@@ -606,16 +608,60 @@ async function flagField(boardname) {
   }
 }
 
+
+// gibberish detector js
+(function (h) {
+    function e(c, b, a) { return c < b ? (a = b - c, Math.log(b) / Math.log(a) * 100) : c > a ? (b = c - a, Math.log(100 - a) / Math.log(b) * 100) : 0 } function k(c) { for (var b = {}, a = "", d = 0; d < c.length; ++d)c[d] in b || (b[c[d]] = 1, a += c[d]); return a } h.detect = function (c) {
+        if (0 === c.length || !c.trim()) return 0; for (var b = c, a = []; a.length < b.length / 35;)a.push(b.substring(0, 35)), b = b.substring(36); 1 <= a.length && 10 > a[a.length - 1].length && (a[a.length - 2] += a[a.length - 1], a.pop()); for (var b = [], d = 0; d < a.length; d++)b.push(k(a[d]).length); a = 100 * b; for (d = b =
+            0; d < a.length; d++)b += parseFloat(a[d], 10); a = b / a.length; for (var f = d = b = 0; f < c.length; f++) { var g = c.charAt(f); g.match(/^[a-zA-Z]+$/) && (g.match(/^(a|e|i|o|u)$/i) && b++, d++) } b = 0 !== d ? b / d * 100 : 0; c = c.split(/[\W_]/).length / c.length * 100; a = Math.max(1, e(a, 45, 50)); b = Math.max(1, e(b, 35, 45)); c = Math.max(1, e(c, 15, 20)); return Math.max(1, (Math.log10(a) + Math.log10(b) + Math.log10(c)) / 6 * 100)
+    }
+})("undefined" === typeof exports ? this.gibberish = {} : exports)
+
+// shannon entropy
+function entropy(str) {
+    return Object.values(Array.from(str).reduce((freq, c) => (freq[c] = (freq[c] || 0) + 1) && freq, {})).reduce((sum, f) => sum - f / str.length * Math.log2(f / str.length), 0)
+}
+
+// vowel counter
+function countVowels(word) {
+    let m = word.match(/[aeiou]/gi);
+    return m === null ? 0 : m.length;
+}
+
+// dummy function
+function isTrue(value){
+    return value
+}
+
+// validate string by multiple tests
+function isGibberish(str, entropyrating, gibberishRating){
+    let strWithoutPunct = str.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
+
+    let entropyValue = entropy(str) < entropyrating;
+    let gibberishValue = gibberish.detect(str) < gibberishRating;
+    let vovelValue = 30 < 100 / strWithoutPunct.length * countVowels(strWithoutPunct) && 100 / strWithoutPunct.length * countVowels(str) < 35;
+    let notGibberish = [entropyValue, gibberishValue, vovelValue].filter(isTrue).length > 1
+    return !notGibberish;
+}
+
 async function hideAnonIfEnabled(node) {
   if (JSON.parse(await GM.getValue("HideAnon", "false"))) {
     if (node) {
       let posts = node.getElementsByClassName("post-container");
       for (let i = 0; i < posts.length; i++) {
         let posterName = posts[i].attributes.getNamedItem("data-name");
-        if (posterName && posterName.value === "Anonymous") {
+        let files = posts[i].querySelectorAll(".filename");
+        let nameIsGibberish = posterName && posterName.value.length > 5 && isGibberish(posterName.value, 3.0, 40);
+        let filesThatAreGibberish = files.values().filter(e => { let splitTitle = e.title.split("."); let titleLength = e.title.length - 1 - splitTitle[splitTitle.length-1].length; return isGibberish(e.title.slice(9, titleLength), 3.0, 30); });
+        let idIsOne = node.querySelector(".user-id")?.attributes["data-count"].value == " (1)";
+        let conditionsMet = 0;
+        if (idIsOne) conditionsMet++;
+        if (nameIsGibberish) conditionsMet++;
+        if (filesThatAreGibberish.next().value) conditionsMet++;
+        if (conditionsMet > 1) {
           let parent = posts[i].parentElement;
           let hiddenElement = document.createElement("div");
-          let text = "[Show hidden post " + posts[i].id + "]";
+          let text = "[Show hidden post " + posts[i].id + " (" + posterName.value + ")]";
           let innerElement = document.createElement("a");
           innerElement.innerText = text;
           innerElement.onclick = function() {
@@ -650,6 +696,33 @@ function setIdTextColor(eles) {
     eles[i].style.padding = "0 4px 0";
     eles[i].style.textShadow = "unset";
   }
+}
+
+function assignIdUpdaterFunction(userIds) {
+  userIds.forEach(uid => {
+    uid.updateIdCounter = function(newval) {
+      this.setAttribute("data-count", " (" + newval + ")");
+      this.setAttribute("mobiletitle", "Double tap highlight (" + newval + ")");
+      this.setAttribute("title", "Double click to highlight (" + newval + ")");
+    }
+  });
+}
+
+function updateNumberOfPostsByIds(userIds, callback) {
+  userIds.forEach(uid => {
+    if (postsByIdsMap.has(uid.innerText)) {
+      postsByIdsMap.get(uid.innerText).push(uid);
+    } else {
+      postsByIdsMap.set(uid.innerText, [uid]);
+    }
+
+    if (idsCounterMap.has(uid.innerText)) {
+      idsCounterMap.set(uid.innerText, idsCounterMap.get(uid.innerText) + 1);
+      callback(uid.innerText);
+    } else {
+      idsCounterMap.set(uid.innerText, 1);
+    }
+  });
 }
 
 function SetupObserver()
@@ -714,17 +787,27 @@ function SetupObserver()
     wrapper.after(document.createElement("br"));
   }
 
+  const updateIdCountersForUserIds = function(uids) {
+    uids.values().flatMap(e => postsByIdsMap.get(e)).forEach(uid => { uid.updateIdCounter(idsCounterMap.get(uid.innerText)); });
+  }
+
   const updateNewPosts = function(list, observer, thread) {
     for(let mutation of list) {
       if (mutation.type === 'childList') {
+        let idsForRefreshing = new Set()
         mutation.addedNodes.forEach(function(node) {
           if (node.nodeName === "ARTICLE" && node.id !== "appendedNode") {
             setIdTextColor(node.getElementsByClassName("user-id"));
+            assignIdUpdaterFunction(node.querySelectorAll(".user-id"));
+            updateNumberOfPostsByIds(node.querySelectorAll(".user-id"), function(uid) { idsForRefreshing.add(uid); });
+            updateIdCountersForUserIds(node.querySelectorAll(".user-id").values().map(e => e.innerText).toArray());
             updateQuotes(node, thread);
             wrapNode(node);
+
             hideAnonIfEnabled(node.parentElement);
           }
         })
+        updateIdCountersForUserIds(idsForRefreshing);
       }
     }
   }
@@ -819,6 +902,8 @@ async function readyFn() {
   SetupEmbeddedCloudflare();
   await ChangeRefreshTime();
   setIdTextColor(document.getElementsByClassName("user-id"));
+  assignIdUpdaterFunction(document.querySelectorAll(".user-id"));
+  updateNumberOfPostsByIds(document.querySelectorAll(".user-id"), function(e) {} );
   addMissingHandlers();
   await hideAnonIfEnabled(GetSingleThreadOrNull());
   console.log("script finished executed");
