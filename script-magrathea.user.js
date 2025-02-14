@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-magrathea-script
-// @version       0.4.1
+// @version       0.4.2
 // @namespace     endchan-magrathea-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -23,12 +23,20 @@ let keyPressMap = new Map();
 let idsCounterMap = new Map();
 let postsByIdsMap = new Map();
 
+let PosterNamesWhitelist;
+
 function GetSingleThreadOrNull() {
   let threads = document.getElementsByClassName("thread noflex threadsContainer");
   if (threads.length === 1) {
     return threads[0];
   } else {
     return null;
+  }
+}
+
+async function initializePosterNamesWhitelist() {
+  if (GetSingleThreadOrNull()) {
+    PosterNamesWhitelist = new Set(await GM.getValue("WhiteListPosters", []));
   }
 }
 
@@ -117,8 +125,8 @@ async function settingsElement(window) {
       if (item === "qrshortcuts") {
         await GM.setValue(item, JSON.stringify(defaultCheck));
       }
-    } else {
-      checked = JSON.parse(checked).enabled;
+    } else if (typeof(checked) !== "object") {
+      checked = JSON.parse(checked)?.enabled;
     }
     input.type = "checkbox";
     input.checked = checked;
@@ -249,6 +257,26 @@ async function settingsElement(window) {
   }
 
 
+  async function createWhitelistOption() {
+    let func = async function() {
+      let val = this.value;
+      if (val === "") {
+        val = [];
+      } else {
+        val = val.split("¤");
+      }
+      await GM.setValue("WhiteListPosters", val);
+    }
+    let defaultValue = await GM.getValue("WhiteListPosters", []);
+    let setting = await createSettingOption("¤", "WhiteListPosters", func, []);
+    setting.firstElementChild.type = "text";
+    setting.firstElementChild.placeholder = "Poster name whitelist option. Separate with '¤'";
+    setting.firstElementChild.style.width = "400px";
+    setting.firstElementChild.value=defaultValue.toString();
+    setting.firstElementChild.oninput = func;
+    return setting;
+  }
+
   function defaultQrSettings() {
     function getSetting(enabled, ctrl, shift, code, index) {return {"enabled": enabled, "ctrl": ctrl, "alt": false, "shift": shift, "keyCode": code, "index": index}}
     let settings =
@@ -299,7 +327,8 @@ async function settingsElement(window) {
   //settingsScreen.appendChild(createSettingOption("Retry refreshing despite getting return code 404", "force_refresh", toggleForceReattemptRefresh, false))
   //settingsScreen.appendChild(createSettingOption("Clear spoiler after post submission", "clear_spoiler", clearSpoilerFunc, false))
   settingsScreen.appendChild(await createSettingOption("Share MyPosts between domains", "MyPosts_Shared", myPostsSharing, false));
-  settingsScreen.appendChild(await createSettingOption("Hide Anonymous by default", "HideAnon", hideAnonPosts, false));
+  settingsScreen.appendChild(await createSettingOption("Hide certain posters by default", "HideAnon", hideAnonPosts, false));
+  settingsScreen.appendChild(await createWhitelistOption());
   //settingsScreen.appendChild(createSettingOption("Preview image in Quick Reply", "imagePreview", toggleImagePreview, true))
   //toggleForceReattemptRefresh()
   //toggleForceReattemptRefresh()
@@ -650,6 +679,9 @@ async function hideAnonIfEnabled(node) {
       let posts = node.getElementsByClassName("post-container");
       for (let i = 0; i < posts.length; i++) {
         let posterName = posts[i].attributes.getNamedItem("data-name");
+        if (posterName && PosterNamesWhitelist.has(posterName.value)) {
+          continue;
+        }
         let files = posts[i].querySelectorAll(".filename");
         let nameIsGibberish = posterName && posterName.value.length > 5 && isGibberish(posterName.value, 3.0, 40);
         let filesThatAreGibberish = files.values().filter(e => { let splitTitle = e.title.split("."); let titleLength = e.title.length - 1 - splitTitle[splitTitle.length-1].length; return isGibberish(e.title.slice(9, titleLength), 3.0, 30); });
@@ -896,6 +928,7 @@ async function readyFn() {
   await SetupSettingsMenuItem();
   DecorateQuickReplyWithIds();
   await namefield();
+  await initializePosterNamesWhitelist();
   await flagField(document.querySelector(".board-title")?.innerText.split("/")[1])
   await SetKeypressOnQr();
   SetupObserver();
