@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-magrathea-script
-// @version       0.4.3
+// @version       0.4.4
 // @namespace     endchan-magrathea-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -267,12 +267,17 @@ async function settingsElement(window) {
       }
       await GM.setValue("WhiteListPosters", val);
     }
-    let defaultValue = await GM.getValue("WhiteListPosters", []);
-    let setting = await createSettingOption("¤", "WhiteListPosters", func, []);
+    let defaultValue = [];
+    let setting = await createSettingOption("¤", "WhiteListPosters", func, defaultValue);
+    let currentValue = await GM.getValue("WhiteListPosters", defaultValue);
+    if (typeof(currentValue) == "string") {
+      await GM.setValue("WhiteListPosters", defaultValue);
+      currentValue = defaultValue;
+    }
     setting.firstElementChild.type = "text";
     setting.firstElementChild.placeholder = "Poster name whitelist option. Separate with '¤'";
     setting.firstElementChild.style.width = "400px";
-    setting.firstElementChild.value=defaultValue.join("¤");
+    setting.firstElementChild.value=currentValue.join("¤");
     setting.firstElementChild.oninput = func;
     return setting;
   }
