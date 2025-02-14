@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-magrathea-script
-// @version       0.4.2
+// @version       0.4.3
 // @namespace     endchan-magrathea-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -272,7 +272,7 @@ async function settingsElement(window) {
     setting.firstElementChild.type = "text";
     setting.firstElementChild.placeholder = "Poster name whitelist option. Separate with '¤'";
     setting.firstElementChild.style.width = "400px";
-    setting.firstElementChild.value=defaultValue.toString();
+    setting.firstElementChild.value=defaultValue.join("¤");
     setting.firstElementChild.oninput = func;
     return setting;
   }
