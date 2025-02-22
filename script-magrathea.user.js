@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-magrathea-script
-// @version       0.4.4
+// @version       0.4.5
 // @namespace     endchan-magrathea-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -766,6 +766,39 @@ const updateIdCountersForUserIds = function(uids) {
   uids.values().flatMap(e => postsByIdsMap.get(e)).forEach(uid => { uid.updateIdCounter(idsCounterMap.get(uid.innerText)); });
 }
 
+function transformLinksInPosts(node) {
+  function constructNewHtml(html) {
+    if (html.length <= 0) {
+      return html;
+    }
+    let startIndex = html.indexOf("https://");
+    if (startIndex < 0) {
+      return html;
+    }
+    let startIndexYoutubeTag = html.indexOf('<span class="youtube_wrapper">');
+    if (startIndexYoutubeTag > -1 && startIndexYoutubeTag < startIndex) {
+      let endTagText = "</a></span>";
+      let endTag = html.indexOf(endTagText) + endTagText.length;
+      return html.substring(0, endTag) + constructNewHtml(html.substring(endTag));
+    }
+    let newHtml = html.substring(0, startIndex);
+    let rest = html.substring(startIndex + 1);
+    let endIndexSpace = rest.indexOf(" ");
+    let endIndexNewline = rest.indexOf("\n");
+    let endIndexNewLink = rest.indexOf("https://");
+    let endIndexRest = rest.length;
+    let endIndex = [endIndexSpace, endIndexNewline, endIndexNewLink, endIndexRest].filter(e => e > 0).toSorted((a,b) => a > b)[0];
+    endIndex = endIndex + startIndex + 1;
+    let linkText = html.substring(startIndex, endIndex);
+    let link = '<a href="' + linkText + '">' + linkText + '</a>';
+    newHtml = newHtml + link;
+    return newHtml + constructNewHtml(html.substring(endIndex), html);
+  }
+  node.querySelectorAll(".post-message").forEach(e => {
+    e.innerHTML = constructNewHtml(e.innerHTML);
+  });
+}
+
 function SetupObserver()
 {
   function updateQuotes(node, thread) {
@@ -842,6 +875,7 @@ function SetupObserver()
             wrapNode(node);
 
             hideAnonIfEnabled(node.parentElement);
+            transformLinksInPosts(node);
           }
         })
         updateIdCountersForUserIds(idsForRefreshing);
@@ -945,6 +979,7 @@ async function readyFn() {
   addMissingHandlers();
   updateIdCountersForUserIds(document.querySelectorAll(".user-id").values().map(e => e.innerText).toArray())
   await hideAnonIfEnabled(GetSingleThreadOrNull());
+  transformLinksInPosts(document);
   console.log("script finished executed");
 }
 
