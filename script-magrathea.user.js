@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          endchan-magrathea-script
-// @version       0.4.5
+// @version       0.4.6
 // @namespace     endchan-magrathea-script
 // @author        JacobSvenningsen
 // @description   Adds features and fixes functionality of endchan
@@ -931,8 +931,8 @@ function SetupEmbeddedCloudflare() {
     }
 
     let oldFetch = window.fetch;
-    let newFetch = function(loc) {
-      let r = oldFetch(loc).then(res => {
+    let newFetch = function(loc, options) {
+      let r = oldFetch(loc, options).then(res => {
         if (loc.includes("/thread/" + threadId + "/refresh") && res.status === 403) {
           console.log("received " + res.status + " upon refreshing. Embedding cloudflare");
           if (!document.getElementById("GM_embeddedPage")) {
